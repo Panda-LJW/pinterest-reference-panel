@@ -1,0 +1,26 @@
+{
+  "name": "pinterest-reference-panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local MCP Apps prototype for a read-only Pinterest reference panel in Codex.",
+  "type": "module",
+  "scripts": {
+    "build": "npm run check && esbuild src/server.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.bundle.js",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/server.bundle.js",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

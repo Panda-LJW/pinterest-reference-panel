@@ -1,0 +1,13 @@
+{
+  "name": "pinterest-codex-plugin-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "plugins/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace pinterest-reference-panel",
+    "check": "npm run check --workspace pinterest-reference-panel",
+    "test": "npm test --workspace pinterest-reference-panel"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "pinterest-reference-panel",
+  "version": "0.1.0+codex.20260821212905",
+  "description": "A read-only Pinterest-style reference drawer prototype for Codex.",
+  "author": {
+    "name": "Superpanda"
+  },
+  "interface": {
+    "displayName": "Pinterest \u7d20\u6750\u680f",
+    "shortDescription": "\u5728 Codex \u4e2d\u6d4f\u89c8 Pinterest \u56fe\u7248\u4e0e Pin \u7684\u53ea\u8bfb\u539f\u578b\u3002",
+    "longDescription": "\u4e00\u4e2a\u9762\u5411\u7a84\u4fa7\u680f\u7684 Pinterest \u7d20\u6750\u62bd\u5c49\u539f\u578b\u3002\u5f53\u524d\u4f7f\u7528\u672c\u5730\u5047\u6570\u636e\uff0c\u7528\u4e8e\u9a8c\u8bc1 Codex MCP Apps UI \u7684\u6e32\u67d3\u4f4d\u7f6e\u3001\u7011\u5e03\u6d41\u5e03\u5c40\u548c\u9009\u62e9\u5f15\u7528\u4ea4\u4e92\uff1b\u4e0d\u8fde\u63a5 Pinterest\uff0c\u4e0d\u6267\u884c\u4e0b\u8f7d\u6216\u5199\u64cd\u4f5c\u3002",
+    "developerName": "Superpanda",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "defaultPrompt": [
+      "\u6253\u5f00 Pinterest \u7d20\u6750\u680f\u539f\u578b\u3002",
+      "\u663e\u793a\u6211\u7684 Pinterest \u56fe\u7248\u548c Pin \u5047\u6570\u636e\u3002"
+    ],
+    "brandColor": "#E60023"
+  },
+  "mcpServers": "./.mcp.json"
+}
