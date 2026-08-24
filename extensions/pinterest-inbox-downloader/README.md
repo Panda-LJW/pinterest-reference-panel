@@ -3,7 +3,7 @@
 面向 macOS + Chrome 的精简 Manifest V3 扩展。它只在 Pinterest 页面上收集静态图片，并通过 Chrome Downloads API 写入：
 
 ```text
-~/Downloads/PinterestInbox/<board-slug>/<pin-id>__<safe-title>.<ext>
+~/Downloads/PinterestInbox/<board-slug>/<safe-title>__pin-<pin-id>.<ext>
 ```
 
 ## 本地加载
@@ -22,5 +22,6 @@
 - 取消：停止尚未完成的任务。
 
 每张图先探测 Pinterest CDN `originals` 原图：优先原生 JPG/PNG，如果原图只有 WebP 则原样保留 WebP。扩展不转码、不伪改后缀，也不回退到低分辨率缩略图。
+文件名使用“标题在前、Pin ID 在后”，方便浏览并保持稳定去重，例如 `Modern Pink Dinosaur__pin-123456.jpg`。
 
 视频 Pin、HLS、无有效 `pinimg.com` 地址或无可用 originals 原图的项目会被跳过。每个失败下载会自动重试一次；相同 Pin 使用确定性文件名和 `overwrite`，不会写入 `PinterestInbox` 以外的位置。

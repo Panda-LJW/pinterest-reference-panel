@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-08-24 — 原图文件名改为标题优先
+
+- 任务目标：让 originals 原图保留网页 Pin 标题，便于在 Finder 和 Codex Inbox 中识别素材。
+- 修改文件：Chrome 扩展 `shared.js`、`manifest.json`与扩展测试；Codex 插件 `src/inbox.ts`、运行时 bundle、版本与解析测试；同步更新 README、SPEC 和日志索引。
+- 关键决策：新文件统一命名为 `<safe-title>__pin-<pin-id>.<verified-extension>`；显式 `pin-` 标记避免新旧格式歧义。Inbox 解析器同时支持新格式和旧的 `<pin-id>__<safe-title>.<ext>`，不要求迁移现有素材。
+- 验证结果：TypeScript 检查与 MCP bundle 构建通过；19/19 Node 自动测试通过，包括新命名、旧命名兼容、originals 格式选择和工作区导入。
+- 未解决事项：Chrome 扩展需手动重新加载；更新后的 Codex 解析器需在重新安装插件并新建任务后生效；真实 Pin 标题与原图字节一致性仍需用户验收。
+- 回滚提示：回退本轮提交并重新加载扩展/插件即可；新旧命名素材都不会被自动删除。
+
 ## 2026-08-24 — 采集开关与 originals 原图优先
 
 - 任务目标：根据真实 Chrome 下载验收结果，增加面板内暂停/启用控制，并将素材策略改为“original 质量优先”。

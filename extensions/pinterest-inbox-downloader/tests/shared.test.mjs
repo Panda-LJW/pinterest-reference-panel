@@ -22,7 +22,7 @@ test("derives stable board, pin, and safe Inbox filenames", async () => {
     pinId: "123456",
     title: "red/dress: study",
     imageUrl: "https://i.pinimg.com/originals/example.webp"
-  }, ".webp"), "PinterestInbox/character-ideas/123456__red-dress- study.webp");
+  }, ".webp"), "PinterestInbox/character-ideas/red-dress- study__pin-123456.webp");
   assert.throws(() => shared.buildDownloadFilename({ boardSlug: "board", pinId: "1", title: "bad" }), /verified|\u5df2\u9a8c\u8bc1/);
 });
 

@@ -21187,11 +21187,19 @@ function humanizeSlug(value) {
 function parseInboxFilename(fileName) {
   const extension = extname(fileName).toLowerCase();
   const stem = basename(fileName, extension);
-  const match = stem.match(/^([a-zA-Z0-9-]+)__(.+)$/);
-  if (!match) return { pinId: stem, title: humanizeSlug(stem), extension };
+  const titleFirstMatch = stem.match(/^(.+)__pin-([a-zA-Z0-9-]+)$/);
+  if (titleFirstMatch) {
+    return {
+      pinId: titleFirstMatch[2] ?? stem,
+      title: humanizeSlug(titleFirstMatch[1] ?? stem),
+      extension
+    };
+  }
+  const legacyMatch = stem.match(/^([a-zA-Z0-9-]+)__(.+)$/);
+  if (!legacyMatch) return { pinId: stem, title: humanizeSlug(stem), extension };
   return {
-    pinId: match[1] ?? stem,
-    title: humanizeSlug(match[2] ?? stem),
+    pinId: legacyMatch[1] ?? stem,
+    title: humanizeSlug(legacyMatch[2] ?? stem),
     extension
   };
 }

@@ -6,6 +6,11 @@ import { test } from "node:test";
 import { InboxService, parseInboxFilename } from "../dist/server.bundle.js";
 
 test("parses deterministic Pinterest Inbox filenames", () => {
+  assert.deepEqual(parseInboxFilename("warm-light-study__pin-123456.jpg"), {
+    pinId: "123456",
+    title: "warm light study",
+    extension: ".jpg"
+  });
   assert.deepEqual(parseInboxFilename("123456__warm-light-study.jpg"), {
     pinId: "123456",
     title: "warm light study",

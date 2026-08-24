@@ -2,12 +2,13 @@
 
 一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件以 Pins / Boards 瀑布流浏览，并把选中素材安全导入当前工作区。
 
-当前状态：**0.2.0 MVP 候选版**。真实登录态下的 Chrome 下载已由用户确认成功；新增的 originals 原图选择和“整板下载 → Codex 导入 → 当前任务读取”仍需完成真实端到端验收。
+当前状态：**0.2.1 MVP 候选版**。真实登录态下的 Chrome 下载已由用户确认成功；新增的 originals 原图选择和“整板下载 → Codex 导入 → 当前任务读取”仍需完成真实端到端验收。
 
 ## 已实现能力
 
 - Chrome 单张、多选和整板自动滚动下载，面板内可暂停/启用采集；
 - 只下载 Pinterest CDN `originals` 原图；优先原生 JPG/PNG，仅原图只有 WebP 时保留 WebP，不转码、不改假后缀、不回退缩略图；
+- 以 `<标题>__pin-<Pin ID>.<格式>` 保存原图，同时保持可读性、去重与旧版文件兼容；
 - 固定写入 `~/Downloads/PinterestInbox/<board>/`；
 - 静态图片过滤、串行限速、取消、失败重试一次和结果统计；
 - MCP 启动完整扫描、运行期监听、10 秒周期校准与手动刷新；

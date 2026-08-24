@@ -105,7 +105,7 @@
       throw new TypeError("下载文件名必须使用已验证的原图格式");
     }
     const extension = originalExtension;
-    return `PinterestInbox/${board}/${pinId}__${title}${extension}`;
+    return `PinterestInbox/${board}/${title}__pin-${pinId}${extension}`;
   }
 
   target.PinterestInboxShared = Object.freeze({

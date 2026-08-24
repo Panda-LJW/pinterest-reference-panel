@@ -95,9 +95,9 @@ test("download queue resolves originals, stays sequential, and retries once", as
     "https://i.pinimg.com/originals/a/two.png"
   ]);
   assert.deepEqual(harness.downloadCalls.map((item) => item.filename), [
-    "PinterestInbox/board/1__one.jpg",
-    "PinterestInbox/board/1__one.jpg",
-    "PinterestInbox/board/2__two.png"
+    "PinterestInbox/board/one__pin-1.jpg",
+    "PinterestInbox/board/one__pin-1.jpg",
+    "PinterestInbox/board/two__pin-2.png"
   ]);
   const final = harness.progress.findLast((item) => item.status?.done).status;
   assert.equal(final.success, 2);
@@ -126,7 +126,7 @@ test("keeps WebP only when it is the sole available originals asset", async () =
     "https://i.pinimg.com/originals/b/native.webp"
   ]);
   assert.equal(harness.downloadCalls[0].url, "https://i.pinimg.com/originals/b/native.webp");
-  assert.equal(harness.downloadCalls[0].filename, "PinterestInbox/board/3__native-webp.webp");
+  assert.equal(harness.downloadCalls[0].filename, "PinterestInbox/board/native-webp__pin-3.webp");
   harness.complete(1);
   await waitUntil(() => harness.progress.some((item) => item.status?.done));
   assert.equal(harness.progress.findLast((item) => item.status?.done).status.success, 1);

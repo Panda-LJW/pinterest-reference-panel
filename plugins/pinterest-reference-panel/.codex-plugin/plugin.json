@@ -1,6 +1,6 @@
 {
   "name": "pinterest-reference-panel",
-  "version": "0.2.0+codex.20260824022935",
+  "version": "0.2.1+codex.20260824112215",
   "description": "A local Pinterest Inbox reference panel for Codex with safe workspace imports.",
   "author": {
     "name": "Superpanda"
