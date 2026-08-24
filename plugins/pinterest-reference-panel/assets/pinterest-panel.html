@@ -3,207 +3,117 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23e60023'/%3E%3Ctext x='10' y='23' fill='white' font-family='Georgia' font-size='21' font-weight='700'%3EP%3C/text%3E%3C/svg%3E" />
-    <title>Pinterest 素材栏</title>
+    <title>Pinterest Inbox</title>
     <style>
       :root {
         color-scheme: light dark;
-        --paper: #fbfaf8;
-        --paper-raised: rgba(255, 255, 255, 0.92);
-        --ink: #171513;
-        --muted: #77716b;
-        --line: rgba(25, 21, 18, 0.12);
-        --soft-line: rgba(25, 21, 18, 0.07);
+        --paper: #f7f5f1;
+        --paper-strong: rgba(252, 251, 248, 0.96);
+        --ink: #1b1815;
+        --muted: #766f68;
+        --line: rgba(38, 31, 26, 0.12);
+        --soft: rgba(38, 31, 26, 0.06);
         --accent: #e60023;
-        --accent-soft: #fce8ec;
-        --shadow: 0 12px 34px rgba(38, 29, 23, 0.11);
-        --chrome-shadow: 0 1px 0 rgba(25, 21, 18, 0.1), 0 12px 26px rgba(38, 29, 23, 0.07);
-        --radius: 18px;
+        --accent-soft: #fce5e9;
+        --success: #13795b;
+        --warning: #b45f06;
+        --radius: 17px;
+        --shadow: 0 18px 45px rgba(45, 34, 27, 0.14);
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
-          --paper: #151412;
-          --paper-raised: rgba(28, 26, 24, 0.94);
-          --ink: #f3f0eb;
-          --muted: #a8a29b;
+          --paper: #141310;
+          --paper-strong: rgba(24, 22, 19, 0.96);
+          --ink: #f2eee8;
+          --muted: #aaa29a;
           --line: rgba(255, 255, 255, 0.14);
-          --soft-line: rgba(255, 255, 255, 0.08);
+          --soft: rgba(255, 255, 255, 0.07);
           --accent-soft: rgba(230, 0, 35, 0.18);
-          --shadow: 0 16px 38px rgba(0, 0, 0, 0.3);
-          --chrome-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 12px 28px rgba(0, 0, 0, 0.24);
+          --success: #68d7ad;
+          --warning: #f4b261;
+          --shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
         }
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
-      html,
-      body {
-        margin: 0;
+      html, body {
         min-width: 0;
         min-height: 100%;
+        margin: 0;
         background: var(--paper);
         color: var(--ink);
         font-family: "Avenir Next", Avenir, "PingFang SC", "Hiragino Sans GB", sans-serif;
       }
 
-      button {
-        font: inherit;
-      }
-
-      button:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
-
-      .shell {
-        position: relative;
-        width: 100%;
-        min-height: 620px;
-        padding: 0 16px 22px;
-        overflow: visible;
+      body {
         background:
-          radial-gradient(circle at 100% 0%, rgba(230, 0, 35, 0.055), transparent 25%),
+          radial-gradient(circle at 98% 0%, rgba(230, 0, 35, 0.07), transparent 29%),
+          linear-gradient(115deg, transparent 0 64%, rgba(132, 97, 67, 0.035) 64% 65%, transparent 65%),
           var(--paper);
       }
 
-      .shell::before {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        content: "";
-        opacity: 0.18;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
-      }
+      button { font: inherit; }
+      button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-      .panel-chrome,
-      .content,
-      .selection-bar {
-        position: relative;
-        z-index: 1;
-      }
+      .shell { min-height: 620px; padding: 0 15px 28px; }
 
       .panel-chrome {
         position: sticky;
         top: 0;
         z-index: 30;
-        margin: 0 -16px;
-        padding: 18px 16px 0;
-        background:
-          radial-gradient(circle at 100% 0%, rgba(230, 0, 35, 0.07), transparent 31%),
-          var(--paper-raised);
-        box-shadow: var(--chrome-shadow);
-        backdrop-filter: blur(18px) saturate(1.16);
-        -webkit-backdrop-filter: blur(18px) saturate(1.16);
-        isolation: isolate;
+        margin: 0 -15px;
+        padding: 17px 15px 0;
+        border-bottom: 1px solid var(--line);
+        background: var(--paper-strong);
+        box-shadow: 0 12px 30px rgba(40, 31, 25, 0.07);
+        backdrop-filter: blur(20px) saturate(1.15);
+        -webkit-backdrop-filter: blur(20px) saturate(1.15);
       }
 
-      .topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 16px;
-      }
-
-      .brand-block {
-        min-width: 0;
-      }
-
-      .brand-line {
-        display: flex;
-        align-items: center;
-        gap: 9px;
-      }
-
-      .brand-mark {
+      .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+      .brand { min-width: 0; }
+      .brand-line { display: flex; align-items: center; gap: 9px; }
+      .mark {
         display: grid;
-        width: 25px;
-        height: 25px;
+        width: 27px;
+        height: 27px;
         flex: 0 0 auto;
         place-items: center;
         border-radius: 50%;
         background: var(--accent);
         color: white;
         font-family: Georgia, serif;
-        font-size: 16px;
+        font-size: 17px;
         font-style: italic;
         font-weight: 700;
-        letter-spacing: -0.08em;
       }
-
-      h1 {
-        margin: 0;
-        overflow: hidden;
-        font-size: 21px;
-        font-weight: 650;
-        letter-spacing: -0.03em;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .demo-label {
-        margin-top: 3px;
-        color: var(--muted);
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-
-      .toolbar {
-        display: flex;
-        gap: 4px;
-      }
-
+      h1 { margin: 0; font-size: 20px; font-weight: 660; letter-spacing: -0.035em; }
+      .status-line { display: flex; align-items: center; gap: 6px; margin: 4px 0 0 36px; color: var(--muted); font-size: 10px; }
+      .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 15%, transparent); }
+      .status-dot.degraded { background: var(--warning); }
+      .toolbar { display: flex; gap: 3px; }
       .icon-button {
         display: grid;
         width: 34px;
         height: 34px;
         padding: 0;
         place-items: center;
-        border: 1px solid transparent;
+        border: 0;
         border-radius: 50%;
         background: transparent;
         color: var(--ink);
         cursor: pointer;
-        transition: background 160ms ease, transform 160ms ease;
+        transition: background 150ms ease, transform 150ms ease;
       }
+      .icon-button:hover { background: var(--soft); }
+      .icon-button:active { transform: scale(0.91); }
+      .icon-button svg { width: 19px; height: 19px; }
+      .icon-button.loading svg { animation: spin 700ms linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
-      .icon-button:hover {
-        background: var(--soft-line);
-      }
-
-      .icon-button:active {
-        transform: scale(0.92);
-      }
-
-      .icon-button svg {
-        width: 19px;
-        height: 19px;
-      }
-
-      .icon-button.is-loading svg {
-        animation: spin 700ms linear infinite;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      .tabs {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        border-bottom: 1px solid var(--line);
-        margin-bottom: 0;
-      }
-
-      .content {
-        padding-top: 14px;
-      }
-
+      .tabs { display: grid; grid-template-columns: 1fr 1fr; margin-top: 12px; }
       .tab {
         position: relative;
         padding: 10px 0 11px;
@@ -211,46 +121,26 @@
         background: transparent;
         color: var(--muted);
         cursor: pointer;
-        font-size: 14px;
-        font-weight: 560;
+        font-size: 13px;
+        font-weight: 590;
       }
-
-      .tab[aria-selected="true"] {
-        color: var(--ink);
-      }
-
+      .tab[aria-selected="true"] { color: var(--ink); }
       .tab[aria-selected="true"]::after {
         position: absolute;
-        right: 14%;
+        right: 18%;
         bottom: -1px;
-        left: 14%;
+        left: 18%;
         height: 2px;
         border-radius: 4px 4px 0 0;
         background: var(--ink);
         content: "";
       }
 
-      .context-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        min-height: 26px;
-        margin-bottom: 12px;
-      }
-
-      .context-copy {
-        min-width: 0;
-        color: var(--muted);
-        font-size: 11px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .clear-filter {
-        flex: 0 0 auto;
-        padding: 5px 8px;
+      .content { padding-top: 14px; }
+      .context-row { display: flex; min-height: 28px; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+      .context-copy { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+      .clear-filter, .load-more, .retry-message {
+        padding: 6px 9px;
         border: 0;
         border-radius: 999px;
         background: var(--accent-soft);
@@ -260,401 +150,182 @@
         font-weight: 700;
       }
 
-      .pin-grid {
-        columns: 2;
-        column-gap: 10px;
-      }
-
+      .pin-grid { columns: 2; column-gap: 9px; }
       .pin-card {
         position: relative;
         display: inline-block;
         width: 100%;
-        margin: 0 0 10px;
+        min-height: 108px;
+        margin: 0 0 9px;
         padding: 0;
         overflow: hidden;
         break-inside: avoid;
         border: 0;
-        border-radius: 16px;
-        background: #d8d2c9;
-        box-shadow: 0 0 0 1px var(--soft-line);
+        border-radius: var(--radius);
+        background: #d7d0c8;
+        box-shadow: 0 0 0 1px var(--line);
         cursor: pointer;
         text-align: left;
         transform: translateZ(0);
-        animation: reveal 420ms both;
-        transition: box-shadow 180ms ease, transform 180ms ease;
+        animation: reveal 360ms both;
+        transition: transform 170ms ease, box-shadow 170ms ease;
       }
+      .pin-card:nth-child(2n) { animation-delay: 45ms; }
+      .pin-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+      .pin-card:disabled { cursor: progress; }
+      @keyframes reveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 
-      .pin-card:nth-child(2n) { animation-delay: 55ms; }
-      .pin-card:nth-child(3n) { animation-delay: 95ms; }
-
-      @keyframes reveal {
-        from { opacity: 0; transform: translateY(8px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .pin-card:hover {
-        box-shadow: var(--shadow);
-        transform: translateY(-2px);
-      }
-
-      .pin-card[aria-pressed="true"] {
-        box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent), var(--shadow);
-      }
-
-      .artwork {
-        position: relative;
-        width: 100%;
-        overflow: hidden;
-      }
-
-      .artwork svg {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-
-      .card-wash {
-        position: absolute;
-        inset: auto 0 0;
-        display: flex;
-        min-height: 54px;
-        align-items: flex-end;
-        padding: 24px 9px 8px;
-        color: white;
-        background: linear-gradient(transparent, rgba(0, 0, 0, 0.68));
-        opacity: 0;
-        transition: opacity 180ms ease;
-      }
-
-      .pin-card:hover .card-wash,
-      .pin-card[aria-pressed="true"] .card-wash {
-        opacity: 1;
-      }
-
-      .card-title {
-        display: -webkit-box;
-        overflow: hidden;
-        font-size: 11px;
-        font-weight: 650;
-        line-height: 1.25;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-      }
-
-      .select-dot {
+      .pin-image { display: block; width: 100%; height: auto; min-height: 108px; object-fit: cover; background: linear-gradient(135deg, #d7d0c8, #eee9e1); }
+      .placeholder { display: grid; min-height: 150px; place-items: center; color: rgba(255,255,255,.8); background: linear-gradient(145deg, #786e64, #b5a89c); font-family: Georgia, serif; font-size: 27px; font-style: italic; }
+      .card-wash { position: absolute; inset: auto 0 0; padding: 28px 9px 8px; color: white; background: linear-gradient(transparent, rgba(0,0,0,.72)); }
+      .card-title { display: -webkit-box; overflow: hidden; font-size: 11px; font-weight: 650; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .card-board { display: block; margin-top: 3px; overflow: hidden; font-size: 9px; opacity: .76; text-overflow: ellipsis; white-space: nowrap; }
+      .action-state {
         position: absolute;
         top: 8px;
         right: 8px;
         display: grid;
-        width: 24px;
-        height: 24px;
+        min-width: 25px;
+        height: 25px;
+        padding: 0 7px;
         place-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.66);
-        border-radius: 50%;
-        background: rgba(20, 18, 16, 0.46);
+        border: 1px solid rgba(255,255,255,.58);
+        border-radius: 999px;
+        background: rgba(20,18,16,.58);
         color: white;
-        font-size: 12px;
-        opacity: 0;
-        backdrop-filter: blur(8px);
-      }
-
-      .pin-card[aria-pressed="true"] .select-dot {
-        opacity: 1;
-        background: var(--accent);
-      }
-
-      .board-list {
-        display: grid;
-        gap: 11px;
-      }
-
-      .board-card {
-        display: grid;
-        grid-template-columns: 116px minmax(0, 1fr);
-        min-height: 88px;
-        padding: 0;
-        overflow: hidden;
-        border: 1px solid var(--soft-line);
-        border-radius: 16px;
-        background: var(--paper-raised);
-        color: var(--ink);
-        cursor: pointer;
-        text-align: left;
-        animation: reveal 420ms both;
-        transition: transform 180ms ease, box-shadow 180ms ease;
-      }
-
-      .board-card:hover {
-        box-shadow: var(--shadow);
-        transform: translateY(-2px);
-      }
-
-      .board-collage {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2px;
-        background: var(--line);
-      }
-
-      .board-collage > div:first-child {
-        grid-row: span 2;
-      }
-
-      .board-swatch {
-        min-height: 42px;
-        background: var(--swatch);
-      }
-
-      .board-copy {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        justify-content: center;
-        padding: 12px 13px;
-      }
-
-      .board-title {
-        margin-bottom: 4px;
-        overflow: hidden;
-        font-size: 13px;
-        font-weight: 680;
-        letter-spacing: -0.01em;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .board-meta,
-      .board-description {
-        color: var(--muted);
         font-size: 10px;
-        line-height: 1.4;
-      }
-
-      .board-description {
-        display: -webkit-box;
-        overflow: hidden;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-      }
-
-      .selection-bar {
-        position: sticky;
-        bottom: 8px;
-        display: none;
-        align-items: center;
-        gap: 10px;
-        margin-top: 16px;
-        padding: 8px 8px 8px 12px;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: var(--paper-raised);
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(16px);
-      }
-
-      .selection-bar.is-visible {
-        display: flex;
-        animation: rise 220ms both;
-      }
-
-      @keyframes rise {
-        from { opacity: 0; transform: translateY(7px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .selection-copy {
-        min-width: 0;
-        flex: 1;
-      }
-
-      .selection-kicker {
-        color: var(--muted);
-        font-size: 9px;
         font-weight: 700;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
+        backdrop-filter: blur(9px);
       }
+      .action-state.done { background: var(--success); }
+      .action-state.failed { background: var(--warning); }
+      .action-state.busy::before { width: 11px; height: 11px; border: 2px solid rgba(255,255,255,.42); border-top-color: white; border-radius: 50%; content: ""; animation: spin 650ms linear infinite; }
 
-      .selection-title {
-        overflow: hidden;
-        font-size: 11px;
-        font-weight: 650;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
+      .board-list { display: grid; gap: 10px; }
+      .board-card { display: grid; grid-template-columns: 104px minmax(0, 1fr); min-height: 88px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-strong); color: var(--ink); cursor: pointer; text-align: left; transition: transform 170ms ease, box-shadow 170ms ease; }
+      .board-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+      .board-collage { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; background: var(--line); }
+      .board-collage img, .board-collage .swatch { width: 100%; height: 100%; min-height: 42px; object-fit: cover; background: linear-gradient(145deg, #7d7268, #d7ccc0); }
+      .board-collage > :first-child { grid-row: 1 / 3; }
+      .board-copy { align-self: center; min-width: 0; padding: 11px; }
+      .board-title { overflow: hidden; font-size: 13px; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
+      .board-meta { margin-top: 5px; color: var(--muted); font-size: 10px; }
 
-      .use-button {
-        flex: 0 0 auto;
-        padding: 8px 11px;
-        border: 0;
-        border-radius: 11px;
-        background: var(--ink);
-        color: var(--paper);
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 700;
-      }
+      .empty { display: grid; min-height: 360px; place-items: center; padding: 32px 18px; text-align: center; }
+      .empty-card { max-width: 270px; }
+      .empty-mark { display: grid; width: 58px; height: 58px; margin: 0 auto 16px; place-items: center; border: 1px solid var(--line); border-radius: 19px; background: var(--paper-strong); color: var(--accent); font-family: Georgia, serif; font-size: 30px; font-style: italic; box-shadow: var(--shadow); transform: rotate(-4deg); }
+      .empty h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: 20px; font-weight: 500; }
+      .empty p { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+      .path { display: block; margin-top: 11px; padding: 7px 9px; overflow: hidden; border-radius: 8px; background: var(--soft); font-family: ui-monospace, monospace; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+      .footer { display: grid; place-items: center; padding: 15px 0 2px; }
+      .load-more:disabled { opacity: .55; cursor: progress; }
 
-      .toast {
-        position: fixed;
-        right: 14px;
-        bottom: 14px;
-        z-index: 8;
-        max-width: calc(100% - 28px);
-        padding: 9px 11px;
-        border-radius: 12px;
-        background: var(--ink);
-        color: var(--paper);
-        box-shadow: var(--shadow);
-        font-size: 10px;
-        opacity: 0;
-        pointer-events: none;
-        transform: translateY(6px);
-        transition: opacity 160ms ease, transform 160ms ease;
-      }
+      .toast { position: fixed; right: 14px; bottom: 15px; left: 14px; z-index: 50; padding: 10px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper-strong); box-shadow: var(--shadow); font-size: 11px; line-height: 1.4; opacity: 0; pointer-events: none; transform: translateY(10px); transition: opacity 180ms ease, transform 180ms ease; }
+      .toast.visible { opacity: 1; transform: translateY(0); }
 
-      .toast.is-visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      @media (max-width: 310px) {
-        .shell { padding-inline: 12px; }
-        .panel-chrome { margin-inline: -12px; padding-inline: 12px; }
-        .pin-grid { column-gap: 8px; }
-        .pin-card { margin-bottom: 8px; border-radius: 13px; }
-        .board-card { grid-template-columns: 96px minmax(0, 1fr); }
-      }
-
-      @media (max-width: 235px) {
-        .pin-grid { columns: 1; }
-        .demo-label { display: none; }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-          animation-duration: 1ms !important;
-          animation-iteration-count: 1 !important;
-          scroll-behavior: auto !important;
-          transition-duration: 1ms !important;
-        }
-      }
+      @media (max-width: 245px) { .pin-grid { columns: 1; } .status-line { margin-left: 0; } .board-card { grid-template-columns: 82px minmax(0,1fr); } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
     </style>
   </head>
   <body>
     <main class="shell">
       <div class="panel-chrome">
         <header class="topbar">
-          <div class="brand-block">
-            <div class="brand-line">
-              <span class="brand-mark" aria-hidden="true">P</span>
-              <h1>Pinterest</h1>
-            </div>
-            <div class="demo-label">Local prototype · no account connected</div>
+          <div class="brand">
+            <div class="brand-line"><span class="mark" aria-hidden="true">P</span><h1>Pinterest Inbox</h1></div>
+            <div class="status-line"><span class="status-dot" id="status-dot"></span><span id="status-copy">正在连接本地 Inbox…</span></div>
           </div>
           <div class="toolbar">
-            <button class="icon-button" id="refresh" type="button" aria-label="刷新假数据" title="刷新假数据">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path d="M20 11a8.1 8.1 0 1 0-2.3 5.8" />
-                <path d="M20 5v6h-6" />
-              </svg>
+            <button class="icon-button" id="refresh" type="button" aria-label="刷新 Pinterest Inbox" title="刷新">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0-2.3 5.8"/><path d="M20 5v6h-6"/></svg>
             </button>
-            <button class="icon-button" id="about" type="button" aria-label="查看原型说明" title="原型说明">
-              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" />
-              </svg>
+            <button class="icon-button" id="about" type="button" aria-label="查看说明" title="说明">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>
             </button>
           </div>
         </header>
-
-        <nav class="tabs" aria-label="Pinterest 内容类型" role="tablist">
-          <button class="tab" id="tab-pins" type="button" role="tab" aria-controls="panel" aria-selected="true" data-tab="pins">Pins</button>
-          <button class="tab" id="tab-boards" type="button" role="tab" aria-controls="panel" aria-selected="false" data-tab="boards">Boards</button>
+        <nav class="tabs" aria-label="Pinterest Inbox 内容类型" role="tablist">
+          <button class="tab" type="button" role="tab" aria-selected="true" data-tab="pins">Pins</button>
+          <button class="tab" type="button" role="tab" aria-selected="false" data-tab="boards">Boards</button>
         </nav>
       </div>
-
-      <section class="content" id="panel" role="tabpanel" aria-labelledby="tab-pins">
-        <div class="context-row">
-          <div class="context-copy" id="context-copy">8 个本地假 Pin</div>
-          <button class="clear-filter" id="clear-filter" type="button" hidden>查看全部</button>
-        </div>
+      <section class="content" id="panel" role="tabpanel">
+        <div class="context-row"><div class="context-copy" id="context-copy">0 张图片</div><button class="clear-filter" id="clear-filter" type="button" hidden>查看全部</button></div>
         <div id="content-root"></div>
+        <div class="footer"><button class="load-more" id="load-more" type="button" hidden>加载更多</button></div>
       </section>
-
-      <aside class="selection-bar" id="selection-bar" aria-live="polite">
-        <div class="selection-copy">
-          <div class="selection-kicker">Selected reference</div>
-          <div class="selection-title" id="selection-title"></div>
-        </div>
-        <button class="use-button" id="use-reference" type="button">引用</button>
-      </aside>
     </main>
     <div class="toast" id="toast" role="status"></div>
 
     <script>
       (() => {
-        const fallbackData = {
-          mode: "demo",
-          refreshedAt: new Date().toISOString(),
-          boards: [
-            { id: "characters", title: "角色与姿态", description: "人物轮廓、动作和服装参考", pinCount: 2 },
-            { id: "editorial", title: "编辑设计", description: "杂志封面、字体和版式节奏", pinCount: 3 },
-            { id: "color", title: "色彩与光", description: "大胆配色与电影感照明", pinCount: 2 },
-            { id: "creatures", title: "怪兽涂鸦", description: "玩具感生物和粗粝笔触", pinCount: 1 }
-          ],
-          pins: [
-            { id: "pin-dino-blue", boardId: "creatures", title: "蓝色暴龙涂鸦", note: "粗线条、玩具感比例、明亮底色", aspect: 0.74, art: "dino", palette: ["#0B9BCE", "#F5D547", "#111111"] },
-            { id: "pin-ember-friend", boardId: "color", title: "火焰伙伴", note: "深色空间里的暖色发光角色", aspect: 0.82, art: "ember", palette: ["#0B0606", "#F45D22", "#FFB320"] },
-            { id: "pin-neon-portrait", boardId: "characters", title: "霓虹角色肖像", note: "酸性绿与紫色的角色配色", aspect: 0.78, art: "portrait", palette: ["#FF7A3D", "#B9FF30", "#9C5BFF"] },
-            { id: "pin-red-dress", boardId: "characters", title: "红色礼服背影", note: "低调黑场与红色轮廓光", aspect: 0.66, art: "ink", palette: ["#080606", "#7A0B19", "#E72C3B"] },
-            { id: "pin-pool-editorial", boardId: "editorial", title: "泳池编辑封面", note: "水光、留白与窄体标题", aspect: 0.72, art: "pool", palette: ["#80DAE8", "#F76D8C", "#F5EEE7"] },
-            { id: "pin-flora-study", boardId: "color", title: "热带植物色稿", note: "珊瑚红、叶绿与纸张颗粒", aspect: 0.9, art: "flora", palette: ["#F6634D", "#155F47", "#F5D9A7"] },
-            { id: "pin-orbit-type", boardId: "editorial", title: "轨道字体实验", note: "黑白结构与单点亮红", aspect: 0.68, art: "orbit", palette: ["#EEECE7", "#171717", "#E60023"] },
-            { id: "pin-signal-poster", boardId: "editorial", title: "信号海报", note: "扫描线、暖棕色与叠印人影", aspect: 0.75, art: "poster", palette: ["#6D2C16", "#E9A64C", "#25130E"] }
-          ]
-        };
-
         const state = {
-          data: fallbackData,
+          data: { mode: "inbox", version: 0, total: 0, assets: [], boards: [], nextCursor: null, watcherStatus: "starting", workspace: { available: false, token: null, reason: "尚未连接工作区" } },
+          thumbnails: {},
+          inboxPath: "~/Downloads/PinterestInbox",
+          workspaceToken: null,
           tab: "pins",
           boardId: null,
-          selectedPinId: null,
+          pending: new Set(),
+          importedPaths: new Map(),
+          failedMessages: new Set(),
           pendingRequests: new Map(),
-          requestId: 1
+          requestId: 1,
+          polling: false
         };
 
         const root = document.getElementById("content-root");
         const contextCopy = document.getElementById("context-copy");
         const clearFilter = document.getElementById("clear-filter");
-        const selectionBar = document.getElementById("selection-bar");
-        const selectionTitle = document.getElementById("selection-title");
         const refreshButton = document.getElementById("refresh");
+        const loadMoreButton = document.getElementById("load-more");
         const toast = document.getElementById("toast");
+        const statusCopy = document.getElementById("status-copy");
+        const statusDot = document.getElementById("status-dot");
 
-        const escapeXml = (value) => String(value).replace(/[<>&"']/g, (character) => ({
-          "<": "&lt;", ">": "&gt;", "&": "&amp;", "\"": "&quot;", "'": "&apos;"
-        })[character]);
-
-        function request(method, params) {
+        function request(method, params, timeoutMs = 5000) {
+          if (window.parent === window) return Promise.reject(new Error("No embedded MCP Apps host"));
           const id = state.requestId++;
           window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
           return new Promise((resolve, reject) => {
-            const timeout = window.setTimeout(() => {
-              state.pendingRequests.delete(id);
-              reject(new Error("Host bridge timed out"));
-            }, 5000);
+            const timeout = window.setTimeout(() => { state.pendingRequests.delete(id); reject(new Error("Host bridge timed out")); }, timeoutMs);
             state.pendingRequests.set(id, { resolve, reject, timeout });
           });
         }
 
-        function unwrapData(value) {
-          return value?.structuredContent ?? value?.call_tool_result?.structuredContent ?? value;
+        async function callTool(name, args) {
+          try { return await request("tools/call", { name, arguments: args }); }
+          catch (error) {
+            if (window.openai?.callTool) return window.openai.callTool(name, args);
+            throw error;
+          }
         }
 
-        function acceptData(value) {
-          const next = unwrapData(value);
-          if (!next || !Array.isArray(next.pins) || !Array.isArray(next.boards)) return false;
-          state.data = next;
+        function findInboxMeta(value, depth = 0) {
+          if (!value || typeof value !== "object" || depth > 5) return null;
+          if (value.pinterestInbox) return value.pinterestInbox;
+          for (const key of ["_meta", "call_tool_result", "mcp_tool_result", "result", "toolResponseMetadata"]) {
+            const found = findInboxMeta(value[key], depth + 1);
+            if (found) return found;
+          }
+          return null;
+        }
+
+        function structured(value) {
+          return value?.structuredContent ?? value?.call_tool_result?.structuredContent ?? value?.mcp_tool_result?.structuredContent ?? value;
+        }
+
+        function acceptResult(value, append = false) {
+          const next = structured(value);
+          if (!next || next.mode !== "inbox") return false;
+          if (next.unchanged) return true;
+          const meta = findInboxMeta(value) ?? findInboxMeta(window.openai?.toolResponseMetadata);
+          if (meta?.thumbnails) Object.assign(state.thumbnails, meta.thumbnails);
+          if (meta?.inboxPath) state.inboxPath = meta.inboxPath;
+          if (meta?.workspaceToken) state.workspaceToken = meta.workspaceToken;
+          if (!Array.isArray(next.assets) || !Array.isArray(next.boards)) return false;
+          const workspace = next.workspace ?? state.data.workspace;
+          state.data = { ...next, workspace, assets: append ? [...state.data.assets, ...next.assets] : next.assets };
           render();
           return true;
         }
@@ -663,214 +334,219 @@
           if (event.source !== window.parent) return;
           const message = event.data;
           if (!message || message.jsonrpc !== "2.0") return;
-
           if (message.id !== undefined && state.pendingRequests.has(message.id)) {
             const pending = state.pendingRequests.get(message.id);
             state.pendingRequests.delete(message.id);
-            window.clearTimeout(pending.timeout);
-            if (message.error) pending.reject(message.error);
-            else pending.resolve(message.result);
+            clearTimeout(pending.timeout);
+            if (message.error) pending.reject(message.error); else pending.resolve(message.result);
             return;
           }
-
-          if (message.method === "ui/notifications/tool-result") {
-            acceptData(message.params);
-          }
+          if (message.method === "ui/notifications/tool-result") acceptResult(message.params);
         }, { passive: true });
 
-        function showToast(message) {
+        function showToast(message, hold = false) {
           toast.textContent = message;
-          toast.classList.add("is-visible");
-          window.clearTimeout(showToast.timer);
-          showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+          toast.classList.add("visible");
+          clearTimeout(showToast.timer);
+          if (!hold) showToast.timer = setTimeout(() => toast.classList.remove("visible"), 2600);
         }
 
-        function artSvg(pin) {
-          const [a, b, c] = pin.palette.map(escapeXml);
-          const commonStart = `<svg viewBox="0 0 200 260" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="260" fill="${a}"/>`;
-          const grain = `<filter id="grain"><feTurbulence baseFrequency=".75" numOctaves="3"/><feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 .12 0"/></filter><rect width="200" height="260" filter="url(#grain)" opacity=".34"/>`;
-          const label = `<text x="16" y="238" fill="white" font-family="Avenir Next, sans-serif" font-size="8" font-weight="700" letter-spacing="2">REFERENCE / 0${pin.id.length}</text>`;
-          const templates = {
-            dino: `<path d="M20 205c12-44 40-76 80-86-7-20 4-45 26-49 27-6 48 16 54 44-14 2-27-2-35-10 2 20-4 31-19 39 18 12 29 35 32 62z" fill="${c}" stroke="#fff" stroke-width="4"/><path d="M114 80l45 20-37 12z" fill="${b}"/><circle cx="137" cy="87" r="6" fill="#fff"/><circle cx="139" cy="88" r="3" fill="${c}"/><path d="M54 165l-24-23m37 12-17-33m76 52 34-25" stroke="${b}" stroke-width="12" stroke-linecap="round"/>`,
-            ember: `<ellipse cx="105" cy="214" rx="72" ry="18" fill="#000" opacity=".55"/><path d="M49 198c-8-36 12-55 31-76-2 22 10 31 22 12 14-23 11-49 6-68 42 29 70 75 52 132z" fill="${b}"/><path d="M79 198c-5-23 9-36 24-52 0 14 6 21 15 11 10-12 10-24 9-34 22 21 34 46 25 75z" fill="${c}"/><circle cx="100" cy="169" r="7" fill="#21120d"/><circle cx="129" cy="169" r="7" fill="#21120d"/><path d="M102 187q14 10 27 0" fill="none" stroke="#21120d" stroke-width="5" stroke-linecap="round"/>`,
-            portrait: `<circle cx="102" cy="84" r="48" fill="${c}"/><path d="M44 227c4-61 28-89 63-89 40 0 66 31 71 89z" fill="${b}"/><path d="M72 86c10 20 49 33 70 6-1 35-15 59-37 59-22 0-36-27-33-65z" fill="#f2c3a5"/><path d="M64 88c5-44 28-60 51-57 31 4 45 26 38 65-13-28-39-31-63-13-11 9-18 11-26 5z" fill="#25183f"/><path d="M86 105l13-2m19 1 12 2" stroke="#211826" stroke-width="4" stroke-linecap="round"/>`,
-            ink: `<rect x="15" y="14" width="170" height="232" rx="2" fill="#050505"/><circle cx="101" cy="71" r="25" fill="#191313"/><path d="M83 92c-19 24-20 74-29 125h99c-8-45-12-94-33-125-12 8-25 9-37 0z" fill="${b}"/><path d="M82 100c12 18 24 19 39 0l17 116H66z" fill="${c}" opacity=".9"/><path d="M70 133c-22 19-30 41-32 68m98-67c20 20 25 42 25 67" fill="none" stroke="#372323" stroke-width="9" stroke-linecap="round"/>`,
-            pool: `<path d="M0 0h200v260H0z" fill="${c}"/><path d="M0 100c50-28 101 28 200-3v92c-60 30-127-28-200 7z" fill="${a}"/><path d="M0 122c55-27 114 32 200-1M0 149c69-24 115 28 200 0M0 176c54-22 111 18 200-4" fill="none" stroke="#fff" stroke-width="5" opacity=".55"/><ellipse cx="126" cy="122" rx="26" ry="45" fill="${b}" transform="rotate(18 126 122)"/><text x="15" y="35" fill="#161616" font-family="Georgia, serif" font-size="27" font-style="italic">after sun</text><text x="16" y="53" fill="#161616" font-family="Avenir Next, sans-serif" font-size="7" letter-spacing="2">VISUAL STUDIES</text>`,
-            flora: `<path d="M100 250C96 171 92 96 104 26" stroke="${c}" stroke-width="9"/><path d="M99 90C38 74 24 32 32 17c46 4 70 31 67 73zm3 39c49-18 80-2 88 18-30 31-68 23-88-18zm-4 37c-50-2-74 30-70 53 39 14 68-8 70-53z" fill="${b}"/><circle cx="112" cy="78" r="29" fill="${c}"/><circle cx="112" cy="78" r="15" fill="${a}"/><path d="M112 48v60M82 78h60" stroke="#fff" stroke-width="3" opacity=".55"/>`,
-            orbit: `<rect x="18" y="20" width="164" height="218" fill="${a}"/><circle cx="100" cy="118" r="62" fill="none" stroke="${b}" stroke-width="2"/><ellipse cx="100" cy="118" rx="73" ry="25" fill="none" stroke="${b}" stroke-width="7" transform="rotate(-24 100 118)"/><circle cx="146" cy="74" r="13" fill="${c}"/><text x="35" y="137" fill="${b}" font-family="Georgia, serif" font-size="52" font-weight="700">O</text><text x="80" y="137" fill="${b}" font-family="Avenir Next, sans-serif" font-size="21" letter-spacing="5">RBIT</text>`,
-            poster: `<rect x="12" y="12" width="176" height="236" fill="${c}"/><path d="M12 38h176M12 64h176M12 90h176M12 116h176M12 142h176M12 168h176M12 194h176M12 220h176" stroke="${b}" stroke-width="7" opacity=".28"/><circle cx="70" cy="113" r="29" fill="${b}" opacity=".65"/><path d="M37 221c2-57 14-83 39-83 24 0 38 29 42 83z" fill="${b}" opacity=".68"/><circle cx="135" cy="87" r="17" fill="${a}"/><path d="M113 185c3-45 13-68 29-68 20 0 30 25 34 68z" fill="${a}"/><text x="24" y="37" fill="#ffe2b1" font-family="Georgia, serif" font-size="20">光影之间</text>`
-          };
-          return `${commonStart}${templates[pin.art] || templates.orbit}${grain}${label}</svg>`;
+        function updateHeader() {
+          const watcher = state.data.watcherStatus;
+          statusDot.classList.toggle("degraded", watcher !== "watching");
+          const workspace = state.data.workspace;
+          const workspaceCopy = workspace?.available ? ` · ${workspace.name}` : " · 仅浏览";
+          statusCopy.textContent = `${watcher === "watching" ? "Watching" : "Reconnecting"} · ${state.data.total} assets${workspaceCopy}`;
         }
 
-        function makePinCard(pin) {
+        function actionLabel(assetId) {
+          if (state.pending.has(assetId)) return { className: "busy", text: "" };
+          if (state.failedMessages.has(assetId)) return { className: "failed", text: "重试" };
+          if (state.importedPaths.has(assetId)) return { className: "done", text: "✓" };
+          return { className: "", text: "+" };
+        }
+
+        function makePinCard(asset) {
           const card = document.createElement("button");
           card.className = "pin-card";
           card.type = "button";
-          card.dataset.pinId = pin.id;
-          card.setAttribute("aria-label", `${pin.title}：${pin.note}`);
-          card.setAttribute("aria-pressed", String(state.selectedPinId === pin.id));
-
-          const artwork = document.createElement("div");
-          artwork.className = "artwork";
-          artwork.style.aspectRatio = String(pin.aspect);
-          artwork.innerHTML = artSvg(pin);
-
+          card.disabled = state.pending.has(asset.id);
+          card.setAttribute("aria-label", `将 ${asset.title} 加入当前任务`);
+          const thumbnail = state.thumbnails[asset.id];
+          if (thumbnail) {
+            const image = document.createElement("img");
+            image.className = "pin-image";
+            image.src = thumbnail;
+            image.alt = asset.title;
+            image.loading = "lazy";
+            card.append(image);
+          } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "placeholder";
+            placeholder.textContent = "P";
+            card.append(placeholder);
+          }
           const wash = document.createElement("div");
           wash.className = "card-wash";
-          const title = document.createElement("span");
-          title.className = "card-title";
-          title.textContent = pin.title;
-          wash.append(title);
-
-          const dot = document.createElement("span");
-          dot.className = "select-dot";
-          dot.setAttribute("aria-hidden", "true");
-          dot.textContent = "✓";
-
-          card.append(artwork, wash, dot);
-          card.addEventListener("click", () => {
-            state.selectedPinId = state.selectedPinId === pin.id ? null : pin.id;
-            render();
-          });
+          wash.innerHTML = `<span class="card-title"></span><span class="card-board"></span>`;
+          wash.querySelector(".card-title").textContent = asset.title;
+          wash.querySelector(".card-board").textContent = asset.boardTitle;
+          const badge = document.createElement("span");
+          const label = actionLabel(asset.id);
+          badge.className = `action-state ${label.className}`;
+          badge.textContent = label.text;
+          card.append(wash, badge);
+          card.addEventListener("click", () => void importReference(asset));
           return card;
         }
 
         function renderPins() {
-          const visiblePins = state.boardId
-            ? state.data.pins.filter((pin) => pin.boardId === state.boardId)
-            : state.data.pins;
+          const visible = state.boardId ? state.data.assets.filter((asset) => asset.boardId === state.boardId) : state.data.assets;
           const board = state.data.boards.find((item) => item.id === state.boardId);
-          contextCopy.textContent = board ? `${board.title} · ${visiblePins.length} 个 Pin` : `${visiblePins.length} 个本地假 Pin`;
+          contextCopy.textContent = board ? `${board.title} · ${visible.length} 张已加载` : `${state.data.total} 张本地图片`;
           clearFilter.hidden = !state.boardId;
-
+          if (state.data.total === 0) return renderEmpty();
           const grid = document.createElement("div");
           grid.className = "pin-grid";
-          visiblePins.forEach((pin) => grid.append(makePinCard(pin)));
+          visible.forEach((asset) => grid.append(makePinCard(asset)));
           root.replaceChildren(grid);
+          loadMoreButton.hidden = Boolean(state.boardId) || !state.data.nextCursor;
         }
 
         function renderBoards() {
-          contextCopy.textContent = `${state.data.boards.length} 个本地假图版`;
+          contextCopy.textContent = `${state.data.boards.length} 个已下载图版`;
           clearFilter.hidden = true;
+          loadMoreButton.hidden = true;
+          if (state.data.boards.length === 0) return renderEmpty();
           const list = document.createElement("div");
           list.className = "board-list";
-
           state.data.boards.forEach((board) => {
-            const boardPins = state.data.pins.filter((pin) => pin.boardId === board.id);
             const card = document.createElement("button");
             card.className = "board-card";
             card.type = "button";
-            card.setAttribute("aria-label", `打开图版 ${board.title}`);
-
             const collage = document.createElement("div");
             collage.className = "board-collage";
-            const swatches = boardPins.length ? boardPins : state.data.pins.slice(0, 3);
             for (let index = 0; index < 3; index += 1) {
-              const swatch = document.createElement("div");
-              swatch.className = "board-swatch";
-              const pin = swatches[index % swatches.length];
-              swatch.style.setProperty("--swatch", `linear-gradient(145deg, ${pin.palette[0]}, ${pin.palette[1]} 58%, ${pin.palette[2]})`);
-              collage.append(swatch);
+              const assetId = board.coverAssetIds[index];
+              const thumbnail = state.thumbnails[assetId];
+              const item = thumbnail ? document.createElement("img") : document.createElement("div");
+              if (thumbnail) item.src = thumbnail; else item.className = "swatch";
+              collage.append(item);
             }
-
             const copy = document.createElement("div");
             copy.className = "board-copy";
-            const title = document.createElement("div");
-            title.className = "board-title";
-            title.textContent = board.title;
-            const meta = document.createElement("div");
-            meta.className = "board-meta";
-            meta.textContent = `${board.pinCount} 个 Pin`;
-            const description = document.createElement("div");
-            description.className = "board-description";
-            description.textContent = board.description;
-            copy.append(title, meta, description);
+            copy.innerHTML = `<div class="board-title"></div><div class="board-meta">${board.pinCount} 个 Pin</div>`;
+            copy.querySelector(".board-title").textContent = board.title;
             card.append(collage, copy);
-            card.addEventListener("click", () => {
-              state.boardId = board.id;
-              state.tab = "pins";
-              render();
-            });
+            card.addEventListener("click", () => { state.boardId = board.id; state.tab = "pins"; render(); });
             list.append(card);
           });
           root.replaceChildren(list);
         }
 
-        function renderSelection() {
-          const selected = state.data.pins.find((pin) => pin.id === state.selectedPinId);
-          selectionBar.classList.toggle("is-visible", Boolean(selected));
-          selectionTitle.textContent = selected?.title ?? "";
+        function renderEmpty() {
+          const wrapper = document.createElement("div");
+          wrapper.className = "empty";
+          const card = document.createElement("div");
+          card.className = "empty-card";
+          card.innerHTML = `<div class="empty-mark">P</div><h2>Inbox 还是空的</h2><p>在 Chrome 中打开 Pinterest 图版，使用配套扩展下载图片。插件会自动发现新素材。</p><span class="path"></span>`;
+          card.querySelector(".path").textContent = state.inboxPath;
+          wrapper.append(card);
+          root.replaceChildren(wrapper);
+          loadMoreButton.hidden = true;
         }
 
         function render() {
-          document.querySelectorAll(".tab").forEach((tab) => {
-            const active = tab.dataset.tab === state.tab;
-            tab.setAttribute("aria-selected", String(active));
-          });
-          document.getElementById("panel").setAttribute("aria-labelledby", state.tab === "pins" ? "tab-pins" : "tab-boards");
-          if (state.tab === "pins") renderPins();
-          else renderBoards();
-          renderSelection();
+          document.querySelectorAll(".tab").forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.tab === state.tab)));
+          updateHeader();
+          if (state.tab === "pins") renderPins(); else renderBoards();
         }
 
-        document.querySelectorAll(".tab").forEach((tab) => {
-          tab.addEventListener("click", () => {
-            state.tab = tab.dataset.tab;
-            render();
-          });
-        });
+        async function sendReferenceMessage(asset, relativePath) {
+          const prompt = `请读取并将工作区图片 @${relativePath} 作为当前任务的视觉参考。素材名称：${asset.title}。`;
+          try { return await request("ui/message", { role: "user", content: [{ type: "text", text: prompt }] }, 1800); }
+          catch (error) {
+            if (window.openai?.sendFollowUpMessage) return window.openai.sendFollowUpMessage({ prompt, scrollToBottom: false });
+            throw error;
+          }
+        }
 
-        clearFilter.addEventListener("click", () => {
-          state.boardId = null;
+        async function importReference(asset) {
+          if (state.pending.has(asset.id)) return;
+          if (!state.data.workspace?.available || !state.workspaceToken) {
+            showToast(state.data.workspace?.reason || "未连接当前工作区，请从 Codex 任务内重新打开插件。");
+            return;
+          }
+          state.pending.add(asset.id);
+          state.failedMessages.delete(asset.id);
           render();
-        });
-
-        refreshButton.addEventListener("click", async () => {
-          refreshButton.classList.add("is-loading");
           try {
-            const result = window.openai?.callTool
-              ? await window.openai.callTool("list_mock_pinterest_content", {})
-              : await request("tools/call", { name: "list_mock_pinterest_content", arguments: {} });
-            if (!acceptData(result)) throw new Error("Unexpected tool result");
-            showToast("假数据已刷新 · 未访问 Pinterest");
-          } catch {
-            state.data = { ...fallbackData, refreshedAt: new Date().toISOString() };
-            render();
-            showToast("当前宿主未开放组件内工具调用，已使用本地数据");
-          } finally {
-            refreshButton.classList.remove("is-loading");
-          }
-        });
-
-        document.getElementById("about").addEventListener("click", () => {
-          showToast("Phase 0：只验证布局与宿主位置，不连接账号");
-        });
-
-        document.getElementById("use-reference").addEventListener("click", async () => {
-          const selected = state.data.pins.find((pin) => pin.id === state.selectedPinId);
-          if (!selected) return;
-          const prompt = `把原型 Pin「${selected.title}」作为当前任务的视觉参考。注意：它只是本地假数据，尚未下载真实图片。`;
-          try {
-            if (window.openai?.sendFollowUpMessage) {
-              await window.openai.sendFollowUpMessage({ prompt, scrollToBottom: false });
-            } else {
-              await request("ui/message", { role: "user", content: [{ type: "text", text: prompt }] });
+            let relativePath = state.importedPaths.get(asset.id);
+            if (!relativePath) {
+              const result = await callTool("import_pinterest_reference", { assetId: asset.id, workspaceToken: state.workspaceToken });
+              const data = structured(result);
+              if (!data?.relativePath) throw new Error("导入工具未返回文件路径");
+              relativePath = data.relativePath;
+              state.importedPaths.set(asset.id, relativePath);
             }
-            showToast("已把模拟参考发送给当前任务");
-          } catch {
-            showToast("已选中；当前宿主未开放消息回传");
+            try {
+              await sendReferenceMessage(asset, relativePath);
+              state.failedMessages.delete(asset.id);
+              showToast(`已加入当前任务 · ${relativePath}`);
+            } catch {
+              state.failedMessages.add(asset.id);
+              showToast(`图片已导入 ${relativePath}，单击卡片重试发送。`, true);
+            }
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : "导入失败");
+          } finally {
+            state.pending.delete(asset.id);
+            render();
           }
+        }
+
+        async function refresh(forceRescan = false) {
+          refreshButton.classList.add("loading");
+          try {
+            const result = await callTool("list_pinterest_inbox", { limit: 30, forceRescan });
+            if (!acceptResult(result)) throw new Error("返回数据格式不正确");
+            if (forceRescan) showToast("Pinterest Inbox 已刷新");
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : "无法读取 Pinterest Inbox");
+          } finally { refreshButton.classList.remove("loading"); }
+        }
+
+        async function poll() {
+          if (state.polling || document.visibilityState !== "visible") return;
+          state.polling = true;
+          try {
+            const result = await callTool("list_pinterest_inbox", { knownVersion: state.data.version, limit: 30 });
+            const next = structured(result);
+            if (!next?.unchanged) acceptResult(result);
+          } catch {
+            statusDot.classList.add("degraded");
+          } finally { state.polling = false; }
+        }
+
+        document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => { state.tab = tab.dataset.tab; render(); }));
+        clearFilter.addEventListener("click", () => { state.boardId = null; render(); });
+        refreshButton.addEventListener("click", () => void refresh(true));
+        document.getElementById("about").addEventListener("click", () => showToast("只显示本地 PinterestInbox。监听仅在插件进程运行时开启。"));
+        loadMoreButton.addEventListener("click", async () => {
+          if (!state.data.nextCursor) return;
+          loadMoreButton.disabled = true;
+          try { acceptResult(await callTool("list_pinterest_inbox", { cursor: state.data.nextCursor, limit: 30 }), true); }
+          finally { loadMoreButton.disabled = false; }
         });
 
-        const initialOutput = window.openai?.toolOutput;
-        if (initialOutput) acceptData(initialOutput);
+        const initialMeta = findInboxMeta(window.openai?.toolResponseMetadata);
+        if (initialMeta?.thumbnails) Object.assign(state.thumbnails, initialMeta.thumbnails);
+        if (initialMeta?.workspaceToken) state.workspaceToken = initialMeta.workspaceToken;
+        if (initialMeta?.inboxPath) state.inboxPath = initialMeta.inboxPath;
+        if (window.openai?.toolOutput) acceptResult(window.openai.toolOutput);
         render();
-
-        request("ui/initialize", {
-          appInfo: { name: "Pinterest Reference Panel", version: "0.1.0" },
-          appCapabilities: {}
-        }).catch(() => {});
+        request("ui/initialize", { appInfo: { name: "Pinterest Inbox", version: "0.2.0" }, appCapabilities: {} }).catch(() => {});
+        setInterval(() => void poll(), 2000);
       })();
     </script>
   </body>

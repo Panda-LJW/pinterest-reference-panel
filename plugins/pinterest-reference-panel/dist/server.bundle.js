@@ -405,11 +405,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants);
+          this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -426,10 +426,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants);
+        this.rhs = optimizeExpr(this.rhs, names, constants2);
         return this;
       }
       get names() {
@@ -490,8 +490,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants) {
-        this.code = optimizeExpr(this.code, names, constants);
+      optimizeNames(names, constants2) {
+        this.code = optimizeExpr(this.code, names, constants2);
         return this;
       }
       get names() {
@@ -520,12 +520,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants))
+          if (n.optimizeNames(names, constants2))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -578,12 +578,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        if (!(super.optimizeNames(names, constants) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
+        if (!(super.optimizeNames(names, constants2) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants);
+        this.condition = optimizeExpr(this.condition, names, constants2);
         return this;
       }
       get names() {
@@ -606,10 +606,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants);
+        this.iteration = optimizeExpr(this.iteration, names, constants2);
         return this;
       }
       get names() {
@@ -645,10 +645,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants2) {
+        if (!super.optimizeNames(names, constants2))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants);
+        this.iterable = optimizeExpr(this.iterable, names, constants2);
         return this;
       }
       get names() {
@@ -690,11 +690,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants2) {
         var _a, _b;
-        super.optimizeNames(names, constants);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
+        super.optimizeNames(names, constants2);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
         return this;
       }
       get names() {
@@ -995,7 +995,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants) {
+    function optimizeExpr(expr, names, constants2) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1010,14 +1010,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants[n.str];
+        const c = constants2[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -1056,10 +1056,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash = {};
+      const hash2 = {};
       for (const item of arr)
-        hash[item] = true;
-      return hash;
+        hash2[item] = true;
+      return hash2;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -2979,7 +2979,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve3.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3006,7 +3006,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve3(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3637,7 +3637,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve3(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
       const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
@@ -3648,49 +3648,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative3, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        relative3 = parse3(serialize(relative3, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative3.scheme) {
+        target.scheme = relative3.scheme;
+        target.userinfo = relative3.userinfo;
+        target.host = relative3.host;
+        target.port = relative3.port;
+        target.path = removeDotSegments(relative3.path || "");
+        target.query = relative3.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative3.userinfo !== void 0 || relative3.host !== void 0 || relative3.port !== void 0) {
+          target.userinfo = relative3.userinfo;
+          target.host = relative3.host;
+          target.port = relative3.port;
+          target.path = removeDotSegments(relative3.path || "");
+          target.query = relative3.query;
         } else {
-          if (!relative.path) {
+          if (!relative3.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative3.query !== void 0) {
+              target.query = relative3.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative3.path[0] === "/") {
+              target.path = removeDotSegments(relative3.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative3.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative3.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative3.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative3.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3698,7 +3698,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative3.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -3921,7 +3921,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve3,
       resolveComponent,
       equal,
       serialize,
@@ -6913,7 +6913,119 @@ var require_dist = __commonJS({
 // src/server.ts
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname as dirname2, join as join3 } from "node:path";
+
+// ../../node_modules/zod/v3/external.js
+var external_exports = {};
+__export(external_exports, {
+  BRAND: () => BRAND,
+  DIRTY: () => DIRTY,
+  EMPTY_PATH: () => EMPTY_PATH,
+  INVALID: () => INVALID,
+  NEVER: () => NEVER,
+  OK: () => OK,
+  ParseStatus: () => ParseStatus,
+  Schema: () => ZodType,
+  ZodAny: () => ZodAny,
+  ZodArray: () => ZodArray,
+  ZodBigInt: () => ZodBigInt,
+  ZodBoolean: () => ZodBoolean,
+  ZodBranded: () => ZodBranded,
+  ZodCatch: () => ZodCatch,
+  ZodDate: () => ZodDate,
+  ZodDefault: () => ZodDefault,
+  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
+  ZodEffects: () => ZodEffects,
+  ZodEnum: () => ZodEnum,
+  ZodError: () => ZodError,
+  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
+  ZodFunction: () => ZodFunction,
+  ZodIntersection: () => ZodIntersection,
+  ZodIssueCode: () => ZodIssueCode,
+  ZodLazy: () => ZodLazy,
+  ZodLiteral: () => ZodLiteral,
+  ZodMap: () => ZodMap,
+  ZodNaN: () => ZodNaN,
+  ZodNativeEnum: () => ZodNativeEnum,
+  ZodNever: () => ZodNever,
+  ZodNull: () => ZodNull,
+  ZodNullable: () => ZodNullable,
+  ZodNumber: () => ZodNumber,
+  ZodObject: () => ZodObject,
+  ZodOptional: () => ZodOptional,
+  ZodParsedType: () => ZodParsedType,
+  ZodPipeline: () => ZodPipeline,
+  ZodPromise: () => ZodPromise,
+  ZodReadonly: () => ZodReadonly,
+  ZodRecord: () => ZodRecord,
+  ZodSchema: () => ZodType,
+  ZodSet: () => ZodSet,
+  ZodString: () => ZodString,
+  ZodSymbol: () => ZodSymbol,
+  ZodTransformer: () => ZodEffects,
+  ZodTuple: () => ZodTuple,
+  ZodType: () => ZodType,
+  ZodUndefined: () => ZodUndefined,
+  ZodUnion: () => ZodUnion,
+  ZodUnknown: () => ZodUnknown,
+  ZodVoid: () => ZodVoid,
+  addIssueToContext: () => addIssueToContext,
+  any: () => anyType,
+  array: () => arrayType,
+  bigint: () => bigIntType,
+  boolean: () => booleanType,
+  coerce: () => coerce,
+  custom: () => custom,
+  date: () => dateType,
+  datetimeRegex: () => datetimeRegex,
+  defaultErrorMap: () => en_default,
+  discriminatedUnion: () => discriminatedUnionType,
+  effect: () => effectsType,
+  enum: () => enumType,
+  function: () => functionType,
+  getErrorMap: () => getErrorMap,
+  getParsedType: () => getParsedType,
+  instanceof: () => instanceOfType,
+  intersection: () => intersectionType,
+  isAborted: () => isAborted,
+  isAsync: () => isAsync,
+  isDirty: () => isDirty,
+  isValid: () => isValid,
+  late: () => late,
+  lazy: () => lazyType,
+  literal: () => literalType,
+  makeIssue: () => makeIssue,
+  map: () => mapType,
+  nan: () => nanType,
+  nativeEnum: () => nativeEnumType,
+  never: () => neverType,
+  null: () => nullType,
+  nullable: () => nullableType,
+  number: () => numberType,
+  object: () => objectType,
+  objectUtil: () => objectUtil,
+  oboolean: () => oboolean,
+  onumber: () => onumber,
+  optional: () => optionalType,
+  ostring: () => ostring,
+  pipeline: () => pipelineType,
+  preprocess: () => preprocessType,
+  promise: () => promiseType,
+  quotelessJson: () => quotelessJson,
+  record: () => recordType,
+  set: () => setType,
+  setErrorMap: () => setErrorMap,
+  strictObject: () => strictObjectType,
+  string: () => stringType,
+  symbol: () => symbolType,
+  transformer: () => effectsType,
+  tuple: () => tupleType,
+  undefined: () => undefinedType,
+  union: () => unionType,
+  unknown: () => unknownType,
+  util: () => util,
+  void: () => voidType
+});
 
 // ../../node_modules/zod/v3/helpers/util.js
 var util;
@@ -7068,6 +7180,10 @@ var ZodIssueCode = util.arrayToEnum([
   "not_multiple_of",
   "not_finite"
 ]);
+var quotelessJson = (obj) => {
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(/"([^"]+)":/g, "$1:");
+};
 var ZodError = class _ZodError extends Error {
   get errors() {
     return this.issues;
@@ -7268,6 +7384,9 @@ var en_default = errorMap;
 
 // ../../node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
+function setErrorMap(map) {
+  overrideErrorMap = map;
+}
 function getErrorMap() {
   return overrideErrorMap;
 }
@@ -7298,6 +7417,7 @@ var makeIssue = (params) => {
     message: errorMessage
   };
 };
+var EMPTY_PATH = [];
 function addIssueToContext(ctx, issueData) {
   const overrideMap = getErrorMap();
   const issue2 = makeIssue({
@@ -10715,6 +10835,33 @@ ZodReadonly.create = (type, params) => {
     ...processCreateParams(params)
   });
 };
+function cleanParams(params, data) {
+  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
+  const p2 = typeof p === "string" ? { message: p } : p;
+  return p2;
+}
+function custom(check2, _params = {}, fatal) {
+  if (check2)
+    return ZodAny.create().superRefine((data, ctx) => {
+      const r = check2(data);
+      if (r instanceof Promise) {
+        return r.then((r2) => {
+          if (!r2) {
+            const params = cleanParams(_params, data);
+            const _fatal = params.fatal ?? fatal ?? true;
+            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+          }
+        });
+      }
+      if (!r) {
+        const params = cleanParams(_params, data);
+        const _fatal = params.fatal ?? fatal ?? true;
+        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+      }
+      return;
+    });
+  return ZodAny.create();
+}
 var late = {
   object: ZodObject.lazycreate
 };
@@ -10757,6 +10904,9 @@ var ZodFirstPartyTypeKind;
   ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
   ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
+var instanceOfType = (cls, params = {
+  message: `Input not instance of ${cls.name}`
+}) => custom((data) => data instanceof cls, params);
 var stringType = ZodString.create;
 var numberType = ZodNumber.create;
 var nanType = ZodNaN.create;
@@ -10791,9 +10941,23 @@ var optionalType = ZodOptional.create;
 var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
+var ostring = () => stringType().optional();
+var onumber = () => numberType().optional();
+var oboolean = () => booleanType().optional();
+var coerce = {
+  string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+  number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+  boolean: ((arg) => ZodBoolean.create({
+    ...arg,
+    coerce: true
+  })),
+  bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+  date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
+};
+var NEVER = INVALID;
 
 // ../../node_modules/zod/v4/core/core.js
-var NEVER = Object.freeze({
+var NEVER2 = Object.freeze({
   status: "aborted"
 });
 // @__NO_SIDE_EFFECTS__
@@ -15466,7 +15630,7 @@ function check(fn) {
   ch._zod.check = fn;
   return ch;
 }
-function custom(fn, _params) {
+function custom2(fn, _params) {
   return _custom(ZodCustom, fn ?? (() => true), _params);
 }
 function refine(fn, _params = {}) {
@@ -15504,7 +15668,7 @@ var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
 var JSONRPC_VERSION = "2.0";
-var AssertObjectSchema = custom((v) => v !== null && (typeof v === "object" || typeof v === "function"));
+var AssertObjectSchema = custom2((v) => v !== null && (typeof v === "object" || typeof v === "function"));
 var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
@@ -18861,7 +19025,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -18878,7 +19042,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve3, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -18956,7 +19120,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve3(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -19217,12 +19381,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve3, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve3, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -20313,7 +20477,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -20977,205 +21141,502 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve3) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve();
+        resolve3();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve3);
       }
     });
   }
 };
 
-// src/data.ts
-var boards = [
-  { id: "characters", title: "\u89D2\u8272\u4E0E\u59FF\u6001", description: "\u4EBA\u7269\u8F6E\u5ED3\u3001\u52A8\u4F5C\u548C\u670D\u88C5\u53C2\u8003" },
-  { id: "editorial", title: "\u7F16\u8F91\u8BBE\u8BA1", description: "\u6742\u5FD7\u5C01\u9762\u3001\u5B57\u4F53\u548C\u7248\u5F0F\u8282\u594F" },
-  { id: "color", title: "\u8272\u5F69\u4E0E\u5149", description: "\u5927\u80C6\u914D\u8272\u4E0E\u7535\u5F71\u611F\u7167\u660E" },
-  { id: "creatures", title: "\u602A\u517D\u6D82\u9E26", description: "\u73A9\u5177\u611F\u751F\u7269\u548C\u7C97\u7C9D\u7B14\u89E6" }
-];
-var pins = [
-  {
-    id: "pin-dino-blue",
-    boardId: "creatures",
-    title: "\u84DD\u8272\u66B4\u9F99\u6D82\u9E26",
-    note: "\u7C97\u7EBF\u6761\u3001\u73A9\u5177\u611F\u6BD4\u4F8B\u3001\u660E\u4EAE\u5E95\u8272",
-    aspect: 0.74,
-    art: "dino",
-    palette: ["#0B9BCE", "#F5D547", "#111111"]
-  },
-  {
-    id: "pin-ember-friend",
-    boardId: "color",
-    title: "\u706B\u7130\u4F19\u4F34",
-    note: "\u6DF1\u8272\u7A7A\u95F4\u91CC\u7684\u6696\u8272\u53D1\u5149\u89D2\u8272",
-    aspect: 0.82,
-    art: "ember",
-    palette: ["#0B0606", "#F45D22", "#FFB320"]
-  },
-  {
-    id: "pin-neon-portrait",
-    boardId: "characters",
-    title: "\u9713\u8679\u89D2\u8272\u8096\u50CF",
-    note: "\u9178\u6027\u7EFF\u4E0E\u7D2B\u8272\u7684\u89D2\u8272\u914D\u8272",
-    aspect: 0.78,
-    art: "portrait",
-    palette: ["#FF7A3D", "#B9FF30", "#9C5BFF"]
-  },
-  {
-    id: "pin-red-dress",
-    boardId: "characters",
-    title: "\u7EA2\u8272\u793C\u670D\u80CC\u5F71",
-    note: "\u4F4E\u8C03\u9ED1\u573A\u4E0E\u7EA2\u8272\u8F6E\u5ED3\u5149",
-    aspect: 0.66,
-    art: "ink",
-    palette: ["#080606", "#7A0B19", "#E72C3B"]
-  },
-  {
-    id: "pin-pool-editorial",
-    boardId: "editorial",
-    title: "\u6CF3\u6C60\u7F16\u8F91\u5C01\u9762",
-    note: "\u6C34\u5149\u3001\u7559\u767D\u4E0E\u7A84\u4F53\u6807\u9898",
-    aspect: 0.72,
-    art: "pool",
-    palette: ["#80DAE8", "#F76D8C", "#F5EEE7"]
-  },
-  {
-    id: "pin-flora-study",
-    boardId: "color",
-    title: "\u70ED\u5E26\u690D\u7269\u8272\u7A3F",
-    note: "\u73CA\u745A\u7EA2\u3001\u53F6\u7EFF\u4E0E\u7EB8\u5F20\u9897\u7C92",
-    aspect: 0.9,
-    art: "flora",
-    palette: ["#F6634D", "#155F47", "#F5D9A7"]
-  },
-  {
-    id: "pin-orbit-type",
-    boardId: "editorial",
-    title: "\u8F68\u9053\u5B57\u4F53\u5B9E\u9A8C",
-    note: "\u9ED1\u767D\u7ED3\u6784\u4E0E\u5355\u70B9\u4EAE\u7EA2",
-    aspect: 0.68,
-    art: "orbit",
-    palette: ["#EEECE7", "#171717", "#E60023"]
-  },
-  {
-    id: "pin-signal-poster",
-    boardId: "editorial",
-    title: "\u4FE1\u53F7\u6D77\u62A5",
-    note: "\u626B\u63CF\u7EBF\u3001\u6696\u68D5\u8272\u4E0E\u53E0\u5370\u4EBA\u5F71",
-    aspect: 0.75,
-    art: "poster",
-    palette: ["#6D2C16", "#E9A64C", "#25130E"]
-  }
-];
-function getMockPanelData() {
+// src/inbox.ts
+import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { existsSync, watch } from "node:fs";
+import { mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { promisify } from "node:util";
+var execFileAsync = promisify(execFile);
+var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"]);
+var RECONCILE_INTERVAL_MS = 1e4;
+var WATCH_DEBOUNCE_MS = 250;
+function hash(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function normalizeRelativePath(value) {
+  return value.split(sep).join("/");
+}
+function isWithin(root, candidate) {
+  const pathFromRoot = relative(root, candidate);
+  return pathFromRoot === "" || !pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== "..";
+}
+function humanizeSlug(value) {
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  })();
+  return decoded.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim() || "Unsorted";
+}
+function parseInboxFilename(fileName) {
+  const extension = extname(fileName).toLowerCase();
+  const stem = basename(fileName, extension);
+  const match = stem.match(/^([a-zA-Z0-9-]+)__(.+)$/);
+  if (!match) return { pinId: stem, title: humanizeSlug(stem), extension };
   return {
-    mode: "demo",
-    refreshedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    boards: boards.map((board) => ({
-      ...board,
-      pinCount: pins.filter((pin) => pin.boardId === board.id).length
-    })),
-    pins
+    pinId: match[1] ?? stem,
+    title: humanizeSlug(match[2] ?? stem),
+    extension
   };
 }
+async function walkImages(root, directory = root) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const absolutePath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...await walkImages(root, absolutePath));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const lowerName = entry.name.toLowerCase();
+    if (lowerName.endsWith(".crdownload") || lowerName.endsWith(".tmp")) continue;
+    if (!IMAGE_EXTENSIONS.has(extname(lowerName))) continue;
+    paths.push(absolutePath);
+  }
+  return paths;
+}
+async function mapWithConcurrency(values, concurrency, mapper) {
+  const results = new Array(values.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      const value = values[index];
+      if (value !== void 0) results[index] = await mapper(value);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker));
+  return results;
+}
+var InboxService = class {
+  inboxRoot;
+  cacheRoot;
+  reconcileIntervalMs;
+  assets = /* @__PURE__ */ new Map();
+  version = 0;
+  watcher = null;
+  reconcileTimer = null;
+  debounceTimer = null;
+  scanPromise = null;
+  watcherStatus = "stopped";
+  refreshedAt = (/* @__PURE__ */ new Date(0)).toISOString();
+  constructor(options = {}) {
+    this.inboxRoot = resolve(options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR ?? join(homedir(), "Downloads", "PinterestInbox"));
+    this.cacheRoot = resolve(options.cacheRoot ?? join(homedir(), "Library", "Caches", "pinterest-reference-panel", "thumbnails"));
+    this.reconcileIntervalMs = options.reconcileIntervalMs ?? RECONCILE_INTERVAL_MS;
+  }
+  async start() {
+    if (this.watcherStatus !== "stopped") return;
+    this.watcherStatus = "starting";
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.cacheRoot, { recursive: true });
+    await this.scan();
+    this.startWatcher();
+    this.reconcileTimer = setInterval(() => {
+      void this.scan().catch(() => {
+        this.watcherStatus = "degraded";
+      });
+    }, this.reconcileIntervalMs);
+    this.reconcileTimer.unref();
+  }
+  startWatcher() {
+    try {
+      this.watcher = watch(this.inboxRoot, { recursive: true }, () => this.scheduleScan());
+      this.watcher.on("error", () => {
+        this.watcherStatus = "degraded";
+      });
+      this.watcherStatus = "watching";
+    } catch {
+      this.watcherStatus = "degraded";
+    }
+  }
+  scheduleScan() {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      void this.scan().catch(() => {
+        this.watcherStatus = "degraded";
+      });
+    }, WATCH_DEBOUNCE_MS);
+    this.debounceTimer.unref();
+  }
+  async scan() {
+    if (this.scanPromise) return this.scanPromise;
+    this.scanPromise = this.performScan().finally(() => {
+      this.scanPromise = null;
+    });
+    return this.scanPromise;
+  }
+  async performScan() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    const files = await walkImages(this.inboxRoot);
+    const records = await mapWithConcurrency(files, 12, async (sourcePath) => {
+      const fileStat = await stat(sourcePath);
+      const sourceRelativePath = normalizeRelativePath(relative(this.inboxRoot, sourcePath));
+      const segments = sourceRelativePath.split("/");
+      const boardSlug = segments.length > 1 ? segments[0] ?? "unsorted" : "unsorted";
+      const parsed = parseInboxFilename(basename(sourcePath));
+      return {
+        id: hash(sourceRelativePath).slice(0, 24),
+        pinId: parsed.pinId,
+        boardId: boardSlug,
+        boardTitle: humanizeSlug(boardSlug),
+        title: parsed.title,
+        extension: parsed.extension,
+        size: fileStat.size,
+        updatedAt: fileStat.mtime.toISOString(),
+        sourcePath,
+        sourceRelativePath,
+        signature: hash(`${sourceRelativePath}:${fileStat.size}:${fileStat.mtimeMs}`).slice(0, 16)
+      };
+    });
+    records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const nextAssets = new Map(records.map((record2) => [record2.id, record2]));
+    const previousSignature = [...this.assets.values()].map((item) => item.signature).sort().join(":");
+    const nextSignature = records.map((item) => item.signature).sort().join(":");
+    if (previousSignature !== nextSignature) this.version += 1;
+    this.assets = nextAssets;
+    this.refreshedAt = (/* @__PURE__ */ new Date()).toISOString();
+  }
+  getAsset(assetId) {
+    return this.assets.get(assetId) ?? null;
+  }
+  async resolveAsset(assetId) {
+    const asset = this.getAsset(assetId);
+    if (!asset) return null;
+    try {
+      const canonicalRoot = await realpath(this.inboxRoot);
+      const canonicalSource = await realpath(asset.sourcePath);
+      if (!isWithin(canonicalRoot, canonicalSource) || !(await stat(canonicalSource)).isFile()) return null;
+      return { ...asset, sourcePath: canonicalSource };
+    } catch {
+      return null;
+    }
+  }
+  getSummary() {
+    return {
+      version: this.version,
+      total: this.assets.size,
+      watcherStatus: this.watcherStatus,
+      refreshedAt: this.refreshedAt
+    };
+  }
+  buildBoards(records) {
+    const boardMap = /* @__PURE__ */ new Map();
+    for (const record2 of records) {
+      const items = boardMap.get(record2.boardId) ?? [];
+      items.push(record2);
+      boardMap.set(record2.boardId, items);
+    }
+    return [...boardMap.entries()].map(([id, items]) => ({
+      id,
+      title: items[0]?.boardTitle ?? humanizeSlug(id),
+      pinCount: items.length,
+      coverAssetIds: items.slice(0, 3).map((item) => item.id)
+    })).sort((left, right) => left.title.localeCompare(right.title));
+  }
+  async getPage(options = {}) {
+    if (options.forceRescan) await this.scan();
+    const records = [...this.assets.values()];
+    const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
+    const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
+    const visible = records.slice(offset, offset + limit);
+    const thumbnailEntries = await mapWithConcurrency(visible, 4, async (asset) => {
+      try {
+        return [asset.id, await this.getThumbnailDataUrl(asset), null];
+      } catch (error2) {
+        return [asset.id, null, error2 instanceof Error ? error2.message : String(error2)];
+      }
+    });
+    const thumbnails = {};
+    const thumbnailErrors = {};
+    for (const [assetId, dataUrl, error2] of thumbnailEntries) {
+      if (dataUrl) thumbnails[assetId] = dataUrl;
+      if (error2) thumbnailErrors[assetId] = error2;
+    }
+    return {
+      page: {
+        mode: "inbox",
+        version: this.version,
+        total: records.length,
+        cursor: offset === 0 ? null : String(offset),
+        nextCursor: offset + visible.length < records.length ? String(offset + visible.length) : null,
+        assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
+        boards: this.buildBoards(records),
+        watcherStatus: this.watcherStatus,
+        refreshedAt: this.refreshedAt
+      },
+      thumbnails,
+      thumbnailErrors
+    };
+  }
+  async getThumbnailDataUrl(asset) {
+    if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
+    const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
+    if (!existsSync(cachePath)) {
+      const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
+      try {
+        await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15e3 });
+        await rename(temporaryPath, cachePath);
+      } catch (error2) {
+        await rm(temporaryPath, { force: true });
+        throw error2;
+      }
+    }
+    return `data:image/jpeg;base64,${(await readFile(cachePath)).toString("base64")}`;
+  }
+  async close() {
+    this.watcher?.close();
+    this.watcher = null;
+    if (this.reconcileTimer) clearInterval(this.reconcileTimer);
+    this.reconcileTimer = null;
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
+    this.watcherStatus = "stopped";
+  }
+};
+
+// src/workspace.ts
+import { createHash as createHash2, randomBytes } from "node:crypto";
+import { constants } from "node:fs";
+import { access, copyFile, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, stat as stat2 } from "node:fs/promises";
+import { basename as basename2, dirname, extname as extname2, join as join2, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+function isWithin2(root, candidate) {
+  const pathFromRoot = relative2(root, candidate);
+  return pathFromRoot === "" || !pathFromRoot.startsWith(`..${sep2}`) && pathFromRoot !== "..";
+}
+function safeSegment(value) {
+  const cleaned = value.normalize("NFKC").replace(/[\u0000-\u001f\u007f/\\:*?"<>|]/g, "-").replace(/\.{2,}/g, ".").replace(/\s+/g, " ").trim().replace(/^\.+|\.+$/g, "").slice(0, 96);
+  return cleaned || "reference";
+}
+async function fileHash(path) {
+  return createHash2("sha256").update(await readFile2(path)).digest("hex");
+}
+var WorkspaceRegistry = class {
+  roots = /* @__PURE__ */ new Map();
+  async register(candidate) {
+    if (!candidate) return { available: false, name: null, token: null, reason: "Codex \u672A\u63D0\u4F9B\u5F53\u524D\u5DE5\u4F5C\u533A\u8DEF\u5F84" };
+    try {
+      const canonicalPath = await realpath2(resolve2(candidate));
+      if (!(await stat2(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
+      await access(canonicalPath, constants.R_OK | constants.W_OK);
+      const token = randomBytes(24).toString("base64url");
+      this.roots.set(token, canonicalPath);
+      return { available: true, name: basename2(canonicalPath), token, reason: null };
+    } catch (error2) {
+      return { available: false, name: null, token: null, reason: error2 instanceof Error ? error2.message : String(error2) };
+    }
+  }
+  async importAsset(asset, token) {
+    const workspaceRoot = this.roots.get(token);
+    if (!workspaceRoot) throw new Error("\u5DE5\u4F5C\u533A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F");
+    const canonicalRoot = await realpath2(workspaceRoot);
+    const destinationDirectory = join2(canonicalRoot, "references", "pinterest", safeSegment(asset.boardId));
+    await mkdir2(destinationDirectory, { recursive: true });
+    const canonicalDestinationDirectory = await realpath2(destinationDirectory);
+    if (!isWithin2(canonicalRoot, canonicalDestinationDirectory)) throw new Error("\u5DE5\u4F5C\u533A\u5B50\u76EE\u5F55\u6307\u5411\u4E86\u6839\u76EE\u5F55\u4E4B\u5916");
+    const extension = extname2(asset.sourcePath).toLowerCase();
+    const stem = safeSegment(basename2(asset.sourcePath, extension));
+    const sourceDigest = await fileHash(asset.sourcePath);
+    let destinationPath = join2(canonicalDestinationDirectory, `${stem}${extension}`);
+    try {
+      if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true);
+      destinationPath = join2(canonicalDestinationDirectory, `${stem}-${sourceDigest.slice(0, 8)}${extension}`);
+      try {
+        if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true);
+      } catch {
+      }
+    } catch {
+    }
+    if (!isWithin2(canonicalRoot, await realpath2(dirname(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
+    await copyFile(asset.sourcePath, destinationPath, constants.COPYFILE_EXCL);
+    return this.result(canonicalRoot, destinationPath, false);
+  }
+  result(workspaceRoot, destinationPath, reused) {
+    return { relativePath: relative2(workspaceRoot, destinationPath).split(sep2).join("/"), fileName: basename2(destinationPath), reused };
+  }
+};
 
 // src/server.ts
 var PANEL_URI = "ui://pinterest-reference-panel/panel.html";
-var moduleDirectory = dirname(fileURLToPath(import.meta.url));
-var panelHtml = readFileSync(join(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
+var moduleDirectory = dirname2(fileURLToPath(import.meta.url));
+var panelHtml = readFileSync(join3(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
+var inbox = new InboxService();
+var workspaces = new WorkspaceRegistry();
 var server = new McpServer(
+  { name: "pinterest-reference-panel", version: "0.2.0" },
   {
-    name: "pinterest-reference-panel",
-    version: "0.1.0"
-  },
-  {
-    capabilities: {
-      resources: {},
-      tools: {}
-    }
+    capabilities: { resources: {}, tools: {} },
+    instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
   }
 );
-server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => ({
-  contents: [
-    {
-      uri: PANEL_URI,
-      mimeType: "text/html;profile=mcp-app",
-      text: panelHtml,
-      _meta: {
-        ui: {
-          prefersBorder: false
+async function workspaceCandidate(explicitRoot) {
+  const capabilities = server.server.getClientCapabilities();
+  if (capabilities?.roots) {
+    try {
+      const result = await server.server.listRoots();
+      const fileRoots = result.roots.map((root) => {
+        try {
+          return root.uri.startsWith("file:") ? fileURLToPath(root.uri) : null;
+        } catch {
+          return null;
         }
+      }).filter((root) => Boolean(root));
+      if (fileRoots.length === 1) return fileRoots[0] ?? null;
+      if (explicitRoot && fileRoots.some((root) => explicitRoot === root || explicitRoot.startsWith(`${root}/`))) return explicitRoot;
+    } catch {
+    }
+  }
+  return explicitRoot ?? null;
+}
+async function panelResult(options) {
+  if (!options.forceRescan && options.knownVersion !== void 0) {
+    const summary = inbox.getSummary();
+    if (summary.version === options.knownVersion) {
+      return {
+        structuredContent: { mode: "inbox", unchanged: true, ...summary },
+        content: [{ type: "text", text: "Pinterest Inbox \u6CA1\u6709\u53D8\u5316\u3002" }],
+        _meta: { pinterestInbox: { thumbnails: {}, thumbnailErrors: {} } }
+      };
+    }
+  }
+  const pageResult = await inbox.getPage({
+    ...options.cursor ? { cursor: options.cursor } : {},
+    ...options.limit ? { limit: options.limit } : {},
+    ...options.forceRescan !== void 0 ? { forceRescan: options.forceRescan } : {}
+  });
+  const workspace = options.registerWorkspace ? await workspaces.register(await workspaceCandidate(options.workspaceRoot)) : null;
+  const publicWorkspace = workspace ? { available: workspace.available, name: workspace.name, reason: workspace.reason } : null;
+  return {
+    structuredContent: { ...pageResult.page, ...publicWorkspace ? { workspace: publicWorkspace } : {} },
+    content: [{
+      type: "text",
+      text: `Pinterest Inbox \u5DF2\u8BFB\u53D6 ${pageResult.page.total} \u5F20\u56FE\u7247\u3002${workspace?.available ? `\u5F53\u524D\u5DE5\u4F5C\u533A\uFF1A${workspace.name}\u3002` : ""}`
+    }],
+    _meta: {
+      pinterestInbox: {
+        thumbnails: pageResult.thumbnails,
+        thumbnailErrors: pageResult.thumbnailErrors,
+        inboxPath: inbox.inboxRoot,
+        workspaceToken: workspace?.token ?? null
       }
     }
-  ]
+  };
+}
+server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => ({
+  contents: [{
+    uri: PANEL_URI,
+    mimeType: "text/html;profile=mcp-app",
+    text: panelHtml,
+    _meta: {
+      ui: { prefersBorder: false },
+      "openai/widgetDescription": "Pinterest Inbox \u672C\u5730\u7D20\u6750\u7011\u5E03\u6D41\uFF0C\u53EF\u5C06\u9009\u4E2D\u56FE\u7247\u5BFC\u5165\u5F53\u524D\u5DE5\u4F5C\u533A\u3002"
+    }
+  }]
 }));
 server.registerTool(
-  "list_mock_pinterest_content",
+  "list_pinterest_inbox",
   {
-    title: "\u8BFB\u53D6 Pinterest \u539F\u578B\u6570\u636E",
-    description: "\u8FD4\u56DE\u672C\u5730 Pins \u4E0E Boards \u5047\u6570\u636E\u3002\u6B64\u5DE5\u5177\u53EA\u8BFB\uFF0C\u4E0D\u8FDE\u63A5 Pinterest\u3002",
-    inputSchema: {},
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    }
+    title: "\u8BFB\u53D6 Pinterest Inbox",
+    description: "\u5206\u9875\u8BFB\u53D6\u672C\u5730 PinterestInbox \u7684\u56FE\u7247\u4E0E\u56FE\u7248\u76EE\u5F55\u3002",
+    inputSchema: {
+      cursor: external_exports.string().optional(),
+      limit: external_exports.number().int().min(1).max(30).optional(),
+      forceRescan: external_exports.boolean().optional(),
+      knownVersion: external_exports.number().int().min(0).optional()
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },
-  async () => ({
-    structuredContent: getMockPanelData(),
-    content: [
-      {
-        type: "text",
-        text: "\u5DF2\u8BFB\u53D6\u672C\u5730 Pinterest \u539F\u578B\u6570\u636E\uFF1A8 \u4E2A Pin\uFF0C4 \u4E2A\u56FE\u7248\u3002\u672A\u8BBF\u95EE Pinterest\u3002"
-      }
-    ]
+  async ({ cursor, limit, forceRescan, knownVersion }) => panelResult({
+    ...cursor ? { cursor } : {},
+    ...limit ? { limit } : {},
+    ...forceRescan !== void 0 ? { forceRescan } : {},
+    ...knownVersion !== void 0 ? { knownVersion } : {}
   })
 );
 server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "\u6253\u5F00 Pinterest \u7D20\u6750\u680F\u539F\u578B",
-    description: "\u6E32\u67D3 Pins / Boards \u53CC\u5217\u7011\u5E03\u6D41\u539F\u578B\uFF0C\u7528\u4E8E\u9A8C\u8BC1 Codex \u4E2D\u7684\u7EC4\u4EF6\u4F4D\u7F6E\u4E0E\u4EA4\u4E92\u3002",
-    inputSchema: {},
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    },
+    title: "\u6253\u5F00 Pinterest Inbox",
+    description: "\u6253\u5F00\u672C\u5730 Pinterest Inbox \u7D20\u6750\u680F\u3002\u5728 Codex \u4E2D\u8BF7\u5C06\u5F53\u524D\u5DE5\u4F5C\u533A\u7EDD\u5BF9\u8DEF\u5F84\u4F5C\u4E3A workspaceRoot \u4F20\u5165\uFF0C\u4EE5\u4FBF\u5355\u51FB\u5BFC\u5165\u56FE\u7247\u3002",
+    inputSchema: { workspaceRoot: external_exports.string().optional() },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
       ui: { resourceUri: PANEL_URI },
       "openai/outputTemplate": PANEL_URI,
-      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest \u7D20\u6750\u680F\u2026",
-      "openai/toolInvocation/invoked": "Pinterest \u7D20\u6750\u680F\u5DF2\u6253\u5F00"
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest Inbox\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u5DF2\u6253\u5F00"
     }
   },
-  async () => ({
-    structuredContent: getMockPanelData(),
-    content: [
-      {
-        type: "text",
-        text: "Pinterest \u7D20\u6750\u680F\u539F\u578B\u5DF2\u6E32\u67D3\u3002\u5185\u5BB9\u4E3A\u672C\u5730\u5047\u6570\u636E\uFF0C\u4E0D\u4EE3\u8868\u771F\u5B9E\u8D26\u6237\u3002"
-      }
-    ]
-  })
+  async ({ workspaceRoot }) => panelResult({ ...workspaceRoot ? { workspaceRoot } : {}, registerWorkspace: true })
+);
+server.registerTool(
+  "import_pinterest_reference",
+  {
+    title: "\u5BFC\u5165 Pinterest \u53C2\u8003\u56FE",
+    description: "\u5C06 Pinterest Inbox \u4E2D\u660E\u786E\u9009\u4E2D\u7684\u4E00\u5F20\u5DF2\u7D22\u5F15\u56FE\u7247\u590D\u5236\u5230\u5F53\u524D\u5DE5\u4F5C\u533A references/pinterest \u76EE\u5F55\u3002",
+    inputSchema: { assetId: external_exports.string().min(1), workspaceToken: external_exports.string().min(1) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u5BFC\u5165\u53C2\u8003\u56FE\u2026",
+      "openai/toolInvocation/invoked": "\u53C2\u8003\u56FE\u5DF2\u5BFC\u5165"
+    }
+  },
+  async ({ assetId, workspaceToken }) => {
+    const asset = await inbox.resolveAsset(assetId);
+    if (!asset) return { isError: true, content: [{ type: "text", text: "\u672A\u627E\u5230\u8BE5 Inbox \u56FE\u7247\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5\u3002" }] };
+    try {
+      const imported = await workspaces.importAsset(asset, workspaceToken);
+      return {
+        structuredContent: { status: "imported", assetId, title: asset.title, boardTitle: asset.boardTitle, ...imported },
+        content: [{ type: "text", text: `\u5DF2\u5C06\u300C${asset.title}\u300D\u5BFC\u5165\u5DE5\u4F5C\u533A\uFF1A${imported.relativePath}` }]
+      };
+    } catch (error2) {
+      return { isError: true, content: [{ type: "text", text: error2 instanceof Error ? error2.message : String(error2) }] };
+    }
+  }
 );
 async function startServer() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  await inbox.start();
+  await server.connect(new StdioServerTransport());
 }
+async function shutdown() {
+  await inbox.close();
+  await server.close();
+}
+process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
+process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   startServer().catch((error2) => {
-    const message = error2 instanceof Error ? error2.stack ?? error2.message : String(error2);
-    process.stderr.write(`[pinterest-reference-panel] ${message}
+    process.stderr.write(`[pinterest-reference-panel] ${error2 instanceof Error ? error2.stack ?? error2.message : String(error2)}
 `);
     process.exitCode = 1;
   });
 }
 export {
+  InboxService,
+  WorkspaceRegistry,
+  inbox,
+  parseInboxFilename,
   server,
-  startServer
+  startServer,
+  workspaces
 };
