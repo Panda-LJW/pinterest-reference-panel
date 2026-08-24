@@ -21,11 +21,13 @@ async function createHarness(fetchImpl) {
   const sharedSource = await readFile(new URL("shared.js", extensionRoot), "utf8");
   const backgroundSource = await readFile(new URL("background.js", extensionRoot), "utf8");
   const downloadCalls = [];
+  const filenameSuggestions = [];
   const progress = [];
   let onChanged;
+  let onDeterminingFilename;
   let onMessage;
   let nextId = 1;
-  const runtime = { lastError: null, onMessage: { addListener(listener) { onMessage = listener; } } };
+  const runtime = { id: "pinterest-inbox-test", lastError: null, onMessage: { addListener(listener) { onMessage = listener; } } };
   const context = {
     URL,
     AbortController,
@@ -41,7 +43,13 @@ async function createHarness(fetchImpl) {
       tabs: { sendMessage(_tabId, payload, callback) { progress.push(payload); callback?.(); } },
       downloads: {
         onChanged: { addListener(listener) { onChanged = listener; } },
-        download(options, callback) { downloadCalls.push(options); callback(nextId++); },
+        onDeterminingFilename: { addListener(listener) { onDeterminingFilename = listener; } },
+        download(options, callback) {
+          const id = nextId++;
+          downloadCalls.push(options);
+          onDeterminingFilename({ id, url: options.url, filename: new URL(options.url).pathname.split("/").pop(), byExtensionId: runtime.id }, (suggestion = {}) => filenameSuggestions.push(suggestion));
+          callback(id);
+        },
         search(_query, callback) { callback([]); },
         cancel(_id, callback) { callback?.(); }
       }
@@ -52,6 +60,7 @@ async function createHarness(fetchImpl) {
   runInNewContext(backgroundSource, context);
   return {
     downloadCalls,
+    filenameSuggestions,
     progress,
     enqueue(message) {
       let response;
@@ -99,6 +108,12 @@ test("download queue resolves originals, stays sequential, and retries once", as
     "PinterestInbox/board/one__pin-1.jpg",
     "PinterestInbox/board/two__pin-2.png"
   ]);
+  assert.deepEqual(harness.filenameSuggestions.map((item) => item.filename), [
+    "PinterestInbox/board/one__pin-1.jpg",
+    "PinterestInbox/board/one__pin-1.jpg",
+    "PinterestInbox/board/two__pin-2.png"
+  ]);
+  assert.ok(harness.filenameSuggestions.every((item) => item.conflictAction === "overwrite"));
   const final = harness.progress.findLast((item) => item.status?.done).status;
   assert.equal(final.success, 2);
   assert.equal(final.failed, 0);

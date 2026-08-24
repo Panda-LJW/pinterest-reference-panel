@@ -34,7 +34,7 @@ Pinterest 图版
 - 下载串行限速 450ms；失败自动重试一次；用户可以取消扫描或尚未完成的下载。
 - 每个素材必须先探测 Pinterest CDN `originals` 路径；优先服务器确认为原生 JPG/PNG 的原图，仅当 originals 仅有 WebP 时保留 WebP。
 - 不得将 WebP 转码为 JPG/PNG，不得只修改扩展名，不得回退为 `236x` / `474x` / `736x` 等缩略图；无 JPG/PNG/WebP originals 时跳过并单独计数。
-- 新下载文件名固定为 `PinterestInbox/<board-slug>/<safe-title>__pin-<pin-id>.<ext>`，使用 `overwrite` 更新同一确定性目标，不触碰 Inbox 外文件。Codex Inbox 解析器必须继续兼容旧的 `<pin-id>__<safe-title>.<ext>` 格式。
+- 新下载文件名固定为 `PinterestInbox/<board-slug>/<safe-title>__pin-<pin-id>.<ext>`；下载请求的 `filename` 和 `downloads.onDeterminingFilename` 必须提交同一目标，防止 Chrome 回退 CDN 哈希名。使用 `overwrite` 更新同一确定性目标，不触碰 Inbox 外文件。Codex Inbox 解析器必须继续兼容旧的 `<pin-id>__<safe-title>.<ext>` 格式。
 
 ## Inbox 与缩略图
 

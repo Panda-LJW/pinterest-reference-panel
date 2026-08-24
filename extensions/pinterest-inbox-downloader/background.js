@@ -9,6 +9,7 @@ const {
 const queue = [];
 const jobs = new Map();
 const waiters = new Map();
+const desiredFilenames = new Map();
 let activeItem = null;
 let running = false;
 
@@ -74,28 +75,48 @@ chrome.downloads.onChanged.addListener((delta) => {
   resolve(state);
 });
 
+chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+  if (item.byExtensionId !== chrome.runtime.id) {
+    suggest();
+    return;
+  }
+  const exactFilename = desiredFilenames.get(item.url);
+  const sequentialFallback = desiredFilenames.size === 1 ? desiredFilenames.values().next().value : null;
+  const filename = exactFilename ?? sequentialFallback;
+  if (!filename) {
+    suggest();
+    return;
+  }
+  suggest({ filename, conflictAction: "overwrite" });
+});
+
 async function runItem(item, job) {
   const original = await resolveOriginalAsset(item.asset);
   if (!original) return "unsupported";
   const filename = buildDownloadFilename(item.asset, original.extension);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (job.cancelled) return "cancelled";
-    try {
-      const downloadId = await startDownload({
-        url: original.url,
-        filename,
-        conflictAction: "overwrite",
-        saveAs: false
-      });
-      activeItem = { ...item, downloadId };
-      const state = await waitForDownload(downloadId);
-      activeItem = null;
-      if (state === "complete") return "complete";
-    } catch {
-      activeItem = null;
+  desiredFilenames.set(original.url, filename);
+  try {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (job.cancelled) return "cancelled";
+      try {
+        const downloadId = await startDownload({
+          url: original.url,
+          filename,
+          conflictAction: "overwrite",
+          saveAs: false
+        });
+        activeItem = { ...item, downloadId };
+        const state = await waitForDownload(downloadId);
+        activeItem = null;
+        if (state === "complete") return "complete";
+      } catch {
+        activeItem = null;
+      }
     }
+    return job.cancelled ? "cancelled" : "failed";
+  } finally {
+    desiredFilenames.delete(original.url);
   }
-  return job.cancelled ? "cancelled" : "failed";
 }
 
 async function probeOriginal(url) {

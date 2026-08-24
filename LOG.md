@@ -1,5 +1,15 @@
 # 变更日志
 
+## 2026-08-24 — Chrome 最终文件名强制
+
+- 任务目标：修复真实 Chrome 中 originals 下载成功但文件名退回 CDN 哈希的问题。
+- 现场证据：Chrome Profile 1 下载记录 ID 722 的 `by_ext_id` 为本扩展 `flcdkjjbmnngmaiclolggammkdgnhidm`，URL 为 `i.pinimg.com/originals/...jpg`，但最终 `target_path` 是 Downloads 根目录下的哈希文件名；同时确认加载路径指向当前仓库扩展。
+- 修改文件：`background.js`、Chrome 扩展 manifest、队列测试、扩展 README、根 README、SPEC 和日志索引。
+- 关键决策：保留 `downloads.download({ filename })` 并新增 `downloads.onDeterminingFilename`二次强制；只处理 `byExtensionId === chrome.runtime.id` 的本扩展下载，不改写其他网页或扩展的文件名。
+- 验证结果：TypeScript 检查、MCP bundle 构建和 19/19 Node 测试通过；队列测试确认初始 filename 与最终 suggest filename 一致，重试和多格式队列均被覆盖。
+- 未解决事项：必须在 Chrome 手动重新加载 0.2.2 并刷新 Pinterest 页面后，再执行一次真实下载验收。
+- 回滚提示：回退本轮提交并重新加载扩展即可；已下载文件不会被自动删除。
+
 ## 2026-08-24 — 原图文件名改为标题优先
 
 - 任务目标：让 originals 原图保留网页 Pin 标题，便于在 Finder 和 Codex Inbox 中识别素材。
