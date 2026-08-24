@@ -206,6 +206,7 @@ test("high and light jobs download the processed blob with the verified output e
   await waitUntil(() => harness.downloadCalls.length === 1);
   assert.equal(conversions[0].quality, "light");
   assert.equal(conversions[0].url, "https://i.pinimg.com/originals/d/light.png");
+  assert.equal(conversions[0].sourceExtension, ".png");
   assert.match(harness.downloadCalls[0].url, /^blob:chrome-extension:\/\/test\//);
   assert.equal(harness.downloadCalls[0].filename, "PinterestInbox/board/light__pin-5.jpg");
   harness.complete(1);
@@ -229,4 +230,28 @@ test("reports an explicit processing failure instead of downloading a thumbnail 
   assert.equal(final.failed, 1);
   assert.equal(final.processingFailed, 1);
   assert.equal(final.lastError, "JPEG 编码失败");
+});
+
+test("smart-light preserves a WebP originals asset without invoking the converter", async () => {
+  let conversionCount = 0;
+  const harness = await createHarness(async (url) => {
+    const isWebp = url.endsWith(".webp");
+    return { ok: isWebp, url, headers: { get: () => isWebp ? "image/webp" : "text/html" } };
+  }, () => {
+    conversionCount += 1;
+    return { ok: false, error: "converter should not run" };
+  });
+  harness.enqueue({
+    type: "pinterestInboxEnqueue",
+    jobId: "job-smart-webp",
+    quality: "light",
+    assets: [{ pinId: "7", boardSlug: "board", title: "smart-webp", imageUrl: "https://i.pinimg.com/736x/f/smart.webp" }]
+  });
+  await waitUntil(() => harness.downloadCalls.length === 1);
+  assert.equal(conversionCount, 0);
+  assert.equal(harness.downloadCalls[0].url, "https://i.pinimg.com/originals/f/smart.webp");
+  assert.equal(harness.downloadCalls[0].filename, "PinterestInbox/board/smart-webp__pin-7.webp");
+  harness.complete(1);
+  await waitUntil(() => harness.progress.some((item) => item.status?.done));
+  assert.equal(harness.progress.findLast((item) => item.status?.done).status.success, 1);
 });

@@ -103,16 +103,20 @@ export class WorkspaceRegistry {
       cacheReused: false,
       reason
     });
+    if (sourceExtension === ".webp") {
+      return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+    }
     if (this.platform !== "darwin" || !existsSync(this.imageProcessorPath)) return fallback("macOS sips 不可用，已保留原文件");
 
     let temporaryPath: string | null = null;
     try {
       const inspected = await execFileAsync(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15_000 });
       const properties = parseSipsProperties(inspected.stdout);
+      const sourceStat = await stat(asset.sourcePath);
       const withinReferenceSize = Math.max(properties.width, properties.height) <= REFERENCE_MAX_EDGE;
       const reusableFormat = properties.hasAlpha ? sourceExtension === ".png" : sourceExtension === ".jpg";
       if (withinReferenceSize && reusableFormat) {
-        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: true, reason: null };
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
       }
 
       const targetExtension = properties.hasAlpha ? ".png" : ".jpg";
@@ -124,6 +128,9 @@ export class WorkspaceRegistry {
       if (existsSync(cachePath)) {
         const cachedStat = await lstat(cachePath);
         if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("引用缓存不是安全的普通文件");
+        if (cachedStat.size >= sourceStat.size) {
+          return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+        }
         return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: true, reason: null };
       }
 
@@ -132,7 +139,13 @@ export class WorkspaceRegistry {
         ? ["-s", "format", "png"]
         : ["-s", "format", "jpeg", "-s", "formatOptions", String(REFERENCE_JPEG_QUALITY)];
       await execFileAsync(this.imageProcessorPath, ["-Z", String(REFERENCE_MAX_EDGE), ...formatArguments, asset.sourcePath, "--out", temporaryPath], { timeout: 60_000 });
-      if ((await stat(temporaryPath)).size < 1) throw new Error("生成的引用图片为空");
+      const generatedStat = await stat(temporaryPath);
+      if (generatedStat.size < 1) throw new Error("生成的引用图片为空");
+      if (generatedStat.size >= sourceStat.size) {
+        await rm(temporaryPath, { force: true });
+        temporaryPath = null;
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+      }
       await rename(temporaryPath, cachePath);
       temporaryPath = null;
       return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: false, reason: null };

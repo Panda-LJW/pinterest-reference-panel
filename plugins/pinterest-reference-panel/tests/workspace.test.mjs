@@ -96,17 +96,34 @@ printf 'jpeg-2048-q80' > "$output"
   assert.equal(second.cacheReused, true);
 });
 
-test("keeps transparency by generating a PNG derivative", async (context) => {
+test("preserves a WebP reference without invoking the image processor", async (context) => {
   const root = await mkdtemp(join(tmpdir(), "pinterest-alpha-test-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const workspace = join(root, "workspace");
   const source = join(root, "alpha-source.webp");
-  const processor = join(root, "fake-sips-alpha.sh");
   await mkdir(workspace);
   await writeFile(source, "alpha-webp-source");
+  const registry = new WorkspaceRegistry({ derivativeCacheRoot: join(root, "cache"), imageProcessorPath: join(root, "missing-sips"), platform: "darwin" });
+  const state = await registry.register(workspace);
+
+  const imported = await registry.importAsset(asset(source, { extension: ".webp" }), state.token);
+  assert.equal(imported.relativePath, "references/pinterest/character-study/alpha-source.webp");
+  assert.equal(imported.optimization, "source-lightweight");
+  assert.equal(imported.cacheReused, false);
+  assert.equal(await readFile(join(workspace, imported.relativePath), "utf8"), "alpha-webp-source");
+});
+
+test("keeps the source when a generated light derivative would be larger", async (context) => {
+  const root = await mkdtemp(join(tmpdir(), "pinterest-larger-derivative-test-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const workspace = join(root, "workspace");
+  const source = join(root, "already-efficient.png");
+  const processor = join(root, "fake-sips-larger.sh");
+  await mkdir(workspace);
+  await writeFile(source, "compact-source");
   await writeFile(processor, `#!/bin/sh
 if [ "$1" = "-g" ]; then
-  printf 'pixelWidth: 3000\\npixelHeight: 2000\\nhasAlpha: yes\\n'
+  printf 'pixelWidth: 3000\\npixelHeight: 2000\\nhasAlpha: no\\n'
   exit 0
 fi
 previous=''
@@ -114,14 +131,14 @@ for argument in "$@"; do
   if [ "$previous" = "--out" ]; then output="$argument"; fi
   previous="$argument"
 done
-printf 'transparent-png-2048' > "$output"
+printf 'this-generated-jpeg-is-larger-than-the-source' > "$output"
 `);
   await chmod(processor, 0o755);
   const registry = new WorkspaceRegistry({ derivativeCacheRoot: join(root, "cache"), imageProcessorPath: processor, platform: "darwin" });
   const state = await registry.register(workspace);
 
-  const imported = await registry.importAsset(asset(source, { extension: ".webp" }), state.token);
-  assert.equal(imported.relativePath, "references/pinterest/character-study/alpha-source.png");
-  assert.equal(imported.optimization, "generated");
-  assert.equal(await readFile(join(workspace, imported.relativePath), "utf8"), "transparent-png-2048");
+  const imported = await registry.importAsset(asset(source, { extension: ".png" }), state.token);
+  assert.equal(imported.relativePath, "references/pinterest/character-study/already-efficient.png");
+  assert.equal(imported.optimization, "source-lightweight");
+  assert.equal(await readFile(join(workspace, imported.relativePath), "utf8"), "compact-source");
 });

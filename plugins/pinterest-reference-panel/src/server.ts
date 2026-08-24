@@ -18,7 +18,7 @@ export const inbox = new InboxService();
 export const workspaces = new WorkspaceRegistry();
 
 export const server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.3.0" },
+  { name: "pinterest-reference-panel", version: "0.3.1" },
   {
     capabilities: { resources: {}, tools: {} },
     instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."

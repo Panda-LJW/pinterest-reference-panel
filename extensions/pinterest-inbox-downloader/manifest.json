@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pinterest Inbox Downloader",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Download selected static Pinterest images into Downloads/PinterestInbox for the Codex Pinterest Inbox plugin.",
   "permissions": [
     "downloads",

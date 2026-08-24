@@ -13,11 +13,55 @@ async function loadShared() {
   return context.PinterestInboxShared;
 }
 
+async function runOffscreenConversion({ source, candidate }) {
+  const processor = await readFile(new URL("offscreen.js", extensionRoot), "utf8");
+  let onMessage;
+  class CanvasStub {
+    getContext() {
+      return { fillRect() {}, drawImage() {}, set fillStyle(_value) {} };
+    }
+    async convertToBlob() {
+      return new Blob([candidate], { type: "image/jpeg" });
+    }
+  }
+  const context = {
+    AbortController,
+    Blob,
+    DataView,
+    Error,
+    Math,
+    Number,
+    OffscreenCanvas: CanvasStub,
+    Promise,
+    URL,
+    Uint8Array,
+    clearTimeout() {},
+    createImageBitmap: async () => ({ width: 1200, height: 800, close() {} }),
+    fetch: async () => ({ ok: true, status: 200, blob: async () => new Blob([source], { type: "image/jpeg" }) }),
+    setTimeout() { return 1; },
+    chrome: { runtime: { onMessage: { addListener(listener) { onMessage = listener; } } } },
+    document: { createElement() { throw new Error("OffscreenCanvas should be used"); } },
+    globalThis: null
+  };
+  context.globalThis = context;
+  runInNewContext(processor, context);
+  return new Promise((resolve) => {
+    onMessage({
+      type: "pinterestInboxConvertImage",
+      requestId: "request-1",
+      url: "https://i.pinimg.com/originals/test.jpg",
+      sourceExtension: ".jpg",
+      quality: "light"
+    }, {}, resolve);
+  });
+}
+
 test("derives stable board, pin, and safe Inbox filenames", async () => {
   const shared = await loadShared();
-  assert.equal(shared.DEFAULT_DOWNLOAD_QUALITY, "high");
+  assert.equal(shared.DEFAULT_DOWNLOAD_QUALITY, "light");
+  assert.equal(shared.QUALITY_PREFERENCE_VERSION, 2);
   assert.equal(shared.normalizeDownloadQuality("light"), "light");
-  assert.equal(shared.normalizeDownloadQuality("unknown"), "high");
+  assert.equal(shared.normalizeDownloadQuality("unknown"), "light");
   assert.equal(shared.parsePinId("https://www.pinterest.com/pin/123456/"), "123456");
   assert.equal(shared.boardSlugFromUrl("https://www.pinterest.com/panda/Character-Ideas/section/"), "character-ideas");
   assert.equal(shared.cleanPinTitle("其中包括图片：ruggie bucchi poster !!"), "ruggie bucchi poster !!");
@@ -80,6 +124,9 @@ test("content panel exposes pause and persistent image-quality controls", async 
   assert.match(content, /data-quality="high"/);
   assert.match(content, /data-quality="light"/);
   assert.match(content, /chrome\.storage\.local/);
+  assert.match(content, /downloadQualityVersion/);
+  assert.match(content, /needsMigration/);
+  assert.match(content, /data-quality="light" class="active"/);
   assert.ok(content.indexOf("pinrep-footer-organic-title") < content.indexOf('image.getAttribute("alt")'));
 });
 
@@ -88,5 +135,21 @@ test("offscreen processor preserves transparency and emits JPEG quality presets"
   assert.match(processor, /transparent\s+\? \{ type: "image\/png" \}/);
   assert.match(processor, /message\.quality === "light" \? 0\.8 : 0\.9/);
   assert.match(processor, /maxEdge = message\.quality === "light" \? 2048/);
+  assert.match(processor, /candidateBlob\.size >= sourceBlob\.size/);
+  assert.match(processor, /preservedOriginal: preserveOriginal/);
   assert.match(processor, /URL\.revokeObjectURL/);
+});
+
+test("smart-light uses a derivative only when it is smaller than the source", async () => {
+  const preserved = await runOffscreenConversion({ source: "small", candidate: "much-larger-candidate" });
+  assert.equal(preserved.ok, true);
+  assert.equal(preserved.preservedOriginal, true);
+  assert.equal(preserved.outputBytes, 5);
+  assert.equal(preserved.extension, ".jpg");
+
+  const reduced = await runOffscreenConversion({ source: "a-large-original-image", candidate: "tiny" });
+  assert.equal(reduced.ok, true);
+  assert.equal(reduced.preservedOriginal, false);
+  assert.equal(reduced.outputBytes, 4);
+  assert.equal(reduced.extension, ".jpg");
 });

@@ -4,10 +4,11 @@
   const STATIC_EXTENSIONS = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"]);
   const DOWNLOAD_QUALITIES = Object.freeze({
     original: Object.freeze({ id: "original", label: "原图", description: "原始分辨率与格式" }),
-    high: Object.freeze({ id: "high", label: "高清", description: "全分辨率 JPEG 90" }),
-    light: Object.freeze({ id: "light", label: "轻量", description: "长边 2048 · JPEG 80" })
+    high: Object.freeze({ id: "high", label: "JPEG 高清", description: "全分辨率 JPEG 90" }),
+    light: Object.freeze({ id: "light", label: "智能轻量", description: "WebP 原样 · 其他智能缩小" })
   });
-  const DEFAULT_DOWNLOAD_QUALITY = "high";
+  const DEFAULT_DOWNLOAD_QUALITY = "light";
+  const QUALITY_PREFERENCE_VERSION = 2;
 
   function normalizeDownloadQuality(value) {
     return Object.hasOwn(DOWNLOAD_QUALITIES, value) ? value : DEFAULT_DOWNLOAD_QUALITY;
@@ -128,6 +129,7 @@
   target.PinterestInboxShared = Object.freeze({
     DEFAULT_DOWNLOAD_QUALITY,
     DOWNLOAD_QUALITIES,
+    QUALITY_PREFERENCE_VERSION,
     bestSrcsetUrl,
     boardSlugFromUrl,
     buildDownloadFilename,

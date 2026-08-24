@@ -1,6 +1,6 @@
 {
   "name": "pinterest-reference-panel",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Local Pinterest Inbox MCP App for browsing and safely importing reference images into Codex workspaces.",
   "type": "module",

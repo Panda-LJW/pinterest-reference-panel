@@ -23,9 +23,9 @@
       .power{flex:0 0 auto;padding:6px 9px;border:1px solid #dedede;background:#fff;color:#666;font-size:11px}.power:hover{background:#f5f5f5}.power[aria-pressed="false"]{border-color:#111;background:#111;color:#fff}.status{min-height:32px;margin-top:9px;padding:8px 9px;border-radius:10px;background:#f7f7f7;color:#595959;font-size:11px;line-height:1.45}.panel.paused .status{background:#f3f3f3;color:#777}.cancel{margin-top:7px;width:100%;background:#fff0f1;color:#b6001b}.hidden{display:none}
     </style>
     <section class="panel" aria-label="Pinterest Inbox 下载器">
-      <div class="head"><div class="identity"><span class="mark">P</span><div><div class="title">Pinterest Inbox</div><div id="qualitySummary" class="sub">高清 · 全分辨率 JPEG 90</div></div></div><button id="toggleEnabled" class="power" aria-pressed="true" aria-label="暂停 Pinterest Inbox 采集">暂停</button></div>
+      <div class="head"><div class="identity"><span class="mark">P</span><div><div class="title">Pinterest Inbox</div><div id="qualitySummary" class="sub">智能轻量 · WebP 原样保留</div></div></div><button id="toggleEnabled" class="power" aria-pressed="true" aria-label="暂停 Pinterest Inbox 采集">暂停</button></div>
       <div id="controls"><div class="modes"><button id="quick" class="active">单张模式</button><button id="multi">多选模式</button></div>
-      <div class="quality-label"><span>保存质量</span><span>透明图保留 PNG</span></div><div class="qualities" role="group" aria-label="图片保存质量"><button data-quality="original">原图</button><button data-quality="high" class="active">高清</button><button data-quality="light">轻量</button></div>
+      <div class="quality-label"><span>保存质量</span><span>WebP 原样保留</span></div><div class="qualities" role="group" aria-label="图片保存质量"><button data-quality="original">原图</button><button data-quality="high">JPEG 高清</button><button data-quality="light" class="active">智能轻量</button></div>
       <div class="actions"><button id="downloadSelected" disabled>下载已选（0）</button><button id="downloadBoard" class="primary">整板下载</button></div></div>
       <div id="status" class="status">单击 Pin 即可下载静态图片。</div>
       <button id="cancel" class="cancel hidden">取消当前任务</button>
@@ -64,7 +64,7 @@
     });
     const selectedQuality = shared.DOWNLOAD_QUALITIES[downloadQuality];
     qualitySummary.textContent = `${selectedQuality.label} · ${selectedQuality.description}`;
-    if (persist) chrome.storage.local.set({ downloadQuality });
+    if (persist) chrome.storage.local.set({ downloadQuality, downloadQualityVersion: shared.QUALITY_PREFERENCE_VERSION });
   }
 
   function setMode(nextMode) {
@@ -324,7 +324,15 @@
     }
   });
 
-  chrome.storage.local.get({ downloadQuality: shared.DEFAULT_DOWNLOAD_QUALITY }, (values) => {
-    setQuality(values.downloadQuality, false);
+  chrome.storage.local.get(["downloadQuality", "downloadQualityVersion"], (values) => {
+    const needsMigration = values.downloadQualityVersion !== shared.QUALITY_PREFERENCE_VERSION;
+    const nextQuality = needsMigration ? shared.DEFAULT_DOWNLOAD_QUALITY : values.downloadQuality;
+    setQuality(nextQuality, false);
+    if (needsMigration) {
+      chrome.storage.local.set({
+        downloadQuality: shared.DEFAULT_DOWNLOAD_QUALITY,
+        downloadQualityVersion: shared.QUALITY_PREFERENCE_VERSION
+      });
+    }
   });
 })();

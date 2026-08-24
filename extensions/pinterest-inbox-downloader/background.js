@@ -66,16 +66,19 @@ function sendRuntimeMessage(message) {
 }
 
 async function prepareDownloadAsset(original, quality) {
-  if (quality === "original") return { ...original, requestId: null };
+  if (quality === "original" || (quality === "light" && original.extension === ".webp")) {
+    return { ...original, requestId: null, preservedOriginal: true };
+  }
   await ensureOffscreenDocument();
   const requestId = crypto.randomUUID();
   const response = await sendRuntimeMessage({
     type: "pinterestInboxConvertImage",
     requestId,
     url: original.url,
+    sourceExtension: original.extension,
     quality
   });
-  if (!response?.ok || typeof response.url !== "string" || ![".jpg", ".png"].includes(response.extension)) {
+  if (!response?.ok || typeof response.url !== "string" || ![".jpg", ".png", ".webp"].includes(response.extension)) {
     throw new Error(response?.error || "图片处理失败");
   }
   return {
@@ -84,7 +87,8 @@ async function prepareDownloadAsset(original, quality) {
     requestId,
     sourceUrl: original.url,
     sourceBytes: response.sourceBytes,
-    outputBytes: response.outputBytes
+    outputBytes: response.outputBytes,
+    preservedOriginal: Boolean(response.preservedOriginal)
   };
 }
 

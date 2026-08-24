@@ -21509,15 +21509,19 @@ var WorkspaceRegistry = class {
       cacheReused: false,
       reason
     });
+    if (sourceExtension === ".webp") {
+      return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+    }
     if (this.platform !== "darwin" || !existsSync2(this.imageProcessorPath)) return fallback("macOS sips \u4E0D\u53EF\u7528\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6");
     let temporaryPath = null;
     try {
       const inspected = await execFileAsync2(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15e3 });
       const properties = parseSipsProperties(inspected.stdout);
+      const sourceStat = await stat2(asset.sourcePath);
       const withinReferenceSize = Math.max(properties.width, properties.height) <= REFERENCE_MAX_EDGE;
       const reusableFormat = properties.hasAlpha ? sourceExtension === ".png" : sourceExtension === ".jpg";
       if (withinReferenceSize && reusableFormat) {
-        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: true, reason: null };
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
       }
       const targetExtension = properties.hasAlpha ? ".png" : ".jpg";
       const recipe = properties.hasAlpha ? `png-${REFERENCE_MAX_EDGE}` : `jpeg-${REFERENCE_MAX_EDGE}-q${REFERENCE_JPEG_QUALITY}`;
@@ -21528,12 +21532,21 @@ var WorkspaceRegistry = class {
       if (existsSync2(cachePath)) {
         const cachedStat = await lstat(cachePath);
         if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("\u5F15\u7528\u7F13\u5B58\u4E0D\u662F\u5B89\u5168\u7684\u666E\u901A\u6587\u4EF6");
+        if (cachedStat.size >= sourceStat.size) {
+          return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+        }
         return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: true, reason: null };
       }
       temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp${targetExtension}`;
       const formatArguments = properties.hasAlpha ? ["-s", "format", "png"] : ["-s", "format", "jpeg", "-s", "formatOptions", String(REFERENCE_JPEG_QUALITY)];
       await execFileAsync2(this.imageProcessorPath, ["-Z", String(REFERENCE_MAX_EDGE), ...formatArguments, asset.sourcePath, "--out", temporaryPath], { timeout: 6e4 });
-      if ((await stat2(temporaryPath)).size < 1) throw new Error("\u751F\u6210\u7684\u5F15\u7528\u56FE\u7247\u4E3A\u7A7A");
+      const generatedStat = await stat2(temporaryPath);
+      if (generatedStat.size < 1) throw new Error("\u751F\u6210\u7684\u5F15\u7528\u56FE\u7247\u4E3A\u7A7A");
+      if (generatedStat.size >= sourceStat.size) {
+        await rm2(temporaryPath, { force: true });
+        temporaryPath = null;
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+      }
       await rename2(temporaryPath, cachePath);
       temporaryPath = null;
       return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: false, reason: null };
@@ -21562,7 +21575,7 @@ var panelHtml = readFileSync(join3(moduleDirectory, "../assets/pinterest-panel.h
 var inbox = new InboxService();
 var workspaces = new WorkspaceRegistry();
 var server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.3.0" },
+  { name: "pinterest-reference-panel", version: "0.3.1" },
   {
     capabilities: { resources: {}, tools: {} },
     instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."

@@ -49,6 +49,13 @@
     return false;
   }
 
+  function extensionForImageType(type, fallback) {
+    if (type === "image/jpeg" || type === "image/jpg") return ".jpg";
+    if (type === "image/png") return ".png";
+    if (type === "image/webp") return ".webp";
+    return [".jpg", ".png", ".webp"].includes(fallback) ? fallback : null;
+  }
+
   function canvasFor(width, height) {
     if (typeof OffscreenCanvas === "function") return new OffscreenCanvas(width, height);
     const canvas = document.createElement("canvas");
@@ -95,7 +102,13 @@
         const options = transparent
           ? { type: "image/png" }
           : { type: "image/jpeg", quality: message.quality === "light" ? 0.8 : 0.9 };
-        const outputBlob = await canvasToBlob(canvas, options);
+        const candidateBlob = await canvasToBlob(canvas, options);
+        const preserveOriginal = message.quality === "light" && candidateBlob.size >= sourceBlob.size;
+        const outputBlob = preserveOriginal ? sourceBlob : candidateBlob;
+        const outputExtension = preserveOriginal
+          ? extensionForImageType(sourceBlob.type, message.sourceExtension)
+          : transparent ? ".png" : ".jpg";
+        if (!outputExtension) throw new Error("无法确认智能轻量输出格式");
         const objectUrl = URL.createObjectURL(outputBlob);
         objectUrls.set(message.requestId, objectUrl);
         setTimeout(() => {
@@ -108,12 +121,14 @@
           ok: true,
           requestId: message.requestId,
           url: objectUrl,
-          extension: transparent ? ".png" : ".jpg",
+          extension: outputExtension,
           sourceBytes: sourceBlob.size,
           outputBytes: outputBlob.size,
+          candidateBytes: candidateBlob.size,
           width,
           height,
-          transparent
+          transparent,
+          preservedOriginal: preserveOriginal
         };
       } finally {
         bitmap.close();
