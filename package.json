@@ -8,6 +8,6 @@
   "scripts": {
     "build": "npm run build --workspace pinterest-reference-panel",
     "check": "npm run check --workspace pinterest-reference-panel",
-    "test": "npm test --workspace pinterest-reference-panel"
+    "test": "npm test --workspace pinterest-reference-panel && node --test extensions/pinterest-inbox-downloader/tests/*.test.mjs"
   }
 }
