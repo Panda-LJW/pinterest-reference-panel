@@ -18,7 +18,7 @@ export const inbox = new InboxService();
 export const workspaces = new WorkspaceRegistry();
 
 export const server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.2.0" },
+  { name: "pinterest-reference-panel", version: "0.3.0" },
   {
     capabilities: { resources: {}, tools: {} },
     instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
@@ -155,9 +155,10 @@ server.registerTool(
     if (!asset) return { isError: true, content: [{ type: "text" as const, text: "未找到该 Inbox 图片，请刷新后重试。" }] };
     try {
       const imported = await workspaces.importAsset(asset, workspaceToken);
+      const optimizationNote = imported.optimization === "fallback" ? `（${imported.optimizationReason}）` : "（已准备轻量引用版）";
       return {
         structuredContent: { status: "imported", assetId, title: asset.title, boardTitle: asset.boardTitle, ...imported },
-        content: [{ type: "text" as const, text: `已将「${asset.title}」导入工作区：${imported.relativePath}` }]
+        content: [{ type: "text" as const, text: `已将「${asset.title}」导入工作区：${imported.relativePath}${optimizationNote}` }]
       };
     } catch (error) {
       return { isError: true, content: [{ type: "text" as const, text: error instanceof Error ? error.message : String(error) }] };

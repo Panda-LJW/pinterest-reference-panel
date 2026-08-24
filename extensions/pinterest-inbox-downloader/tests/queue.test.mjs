@@ -17,7 +17,7 @@ function waitUntil(predicate, timeoutMs = 2000) {
   });
 }
 
-async function createHarness(fetchImpl) {
+async function createHarness(fetchImpl, convertImpl = null) {
   const sharedSource = await readFile(new URL("shared.js", extensionRoot), "utf8");
   const backgroundSource = await readFile(new URL("background.js", extensionRoot), "utf8");
   const downloadCalls = [];
@@ -27,7 +27,18 @@ async function createHarness(fetchImpl) {
   let onDeterminingFilename;
   let onMessage;
   let nextId = 1;
-  const runtime = { id: "pinterest-inbox-test", lastError: null, onMessage: { addListener(listener) { onMessage = listener; } } };
+  const runtime = {
+    id: "pinterest-inbox-test",
+    lastError: null,
+    onMessage: { addListener(listener) { onMessage = listener; } },
+    sendMessage(message, callback) {
+      if (message.type === "pinterestInboxConvertImage") {
+        Promise.resolve(convertImpl?.(message) ?? { ok: false, error: "missing converter" }).then(callback);
+        return;
+      }
+      callback?.({ ok: true });
+    }
+  };
   const context = {
     URL,
     AbortController,
@@ -40,6 +51,10 @@ async function createHarness(fetchImpl) {
     importScripts() {},
     chrome: {
       runtime,
+      offscreen: {
+        async hasDocument() { return true; },
+        async createDocument() {}
+      },
       tabs: { sendMessage(_tabId, payload, callback) { progress.push(payload); callback?.(); } },
       downloads: {
         onChanged: { addListener(listener) { onChanged = listener; } },
@@ -87,7 +102,8 @@ test("download queue resolves originals, stays sequential, and retries once", as
     assets: [
       { pinId: "1", boardSlug: "board", title: "one", imageUrl: "https://i.pinimg.com/736x/a/one.jpg" },
       { pinId: "2", boardSlug: "board", title: "two", imageUrl: "https://i.pinimg.com/474x/a/two.png" }
-    ]
+    ],
+    quality: "original"
   });
   assert.equal(response.status.pending, 2);
   await waitUntil(() => harness.downloadCalls.length === 1);
@@ -131,7 +147,8 @@ test("keeps WebP only when it is the sole available originals asset", async () =
   harness.enqueue({
     type: "pinterestInboxEnqueue",
     jobId: "job-webp",
-    assets: [{ pinId: "3", boardSlug: "board", title: "native-webp", imageUrl: "https://i.pinimg.com/736x/b/native.webp" }]
+    assets: [{ pinId: "3", boardSlug: "board", title: "native-webp", imageUrl: "https://i.pinimg.com/736x/b/native.webp" }],
+    quality: "original"
   });
   await waitUntil(() => harness.downloadCalls.length === 1);
   assert.deepEqual(probes, [
@@ -156,7 +173,8 @@ test("skips an item when no JPG, PNG, or WebP originals asset exists", async () 
   harness.enqueue({
     type: "pinterestInboxEnqueue",
     jobId: "job-missing",
-    assets: [{ pinId: "4", boardSlug: "board", title: "missing", imageUrl: "https://i.pinimg.com/736x/c/missing.jpg" }]
+    assets: [{ pinId: "4", boardSlug: "board", title: "missing", imageUrl: "https://i.pinimg.com/736x/c/missing.jpg" }],
+    quality: "original"
   });
   await waitUntil(() => harness.progress.some((item) => item.status?.done));
   assert.equal(harness.downloadCalls.length, 0);
@@ -164,4 +182,51 @@ test("skips an item when no JPG, PNG, or WebP originals asset exists", async () 
   assert.equal(final.success, 0);
   assert.equal(final.skipped, 1);
   assert.equal(final.originalUnavailable, 1);
+});
+
+test("high and light jobs download the processed blob with the verified output extension", async () => {
+  const conversions = [];
+  const harness = await createHarness(successfulOriginal, (message) => {
+    conversions.push(message);
+    return {
+      ok: true,
+      requestId: message.requestId,
+      url: `blob:chrome-extension://test/${message.requestId}`,
+      extension: message.quality === "light" ? ".jpg" : ".png",
+      sourceBytes: 3_000_000,
+      outputBytes: 300_000
+    };
+  });
+  harness.enqueue({
+    type: "pinterestInboxEnqueue",
+    jobId: "job-light",
+    quality: "light",
+    assets: [{ pinId: "5", boardSlug: "board", title: "light", imageUrl: "https://i.pinimg.com/736x/d/light.png" }]
+  });
+  await waitUntil(() => harness.downloadCalls.length === 1);
+  assert.equal(conversions[0].quality, "light");
+  assert.equal(conversions[0].url, "https://i.pinimg.com/originals/d/light.png");
+  assert.match(harness.downloadCalls[0].url, /^blob:chrome-extension:\/\/test\//);
+  assert.equal(harness.downloadCalls[0].filename, "PinterestInbox/board/light__pin-5.jpg");
+  harness.complete(1);
+  await waitUntil(() => harness.progress.some((item) => item.status?.done));
+  const final = harness.progress.findLast((item) => item.status?.done).status;
+  assert.equal(final.quality, "light");
+  assert.equal(final.processingFailed, 0);
+});
+
+test("reports an explicit processing failure instead of downloading a thumbnail fallback", async () => {
+  const harness = await createHarness(successfulOriginal, () => ({ ok: false, error: "JPEG 编码失败" }));
+  harness.enqueue({
+    type: "pinterestInboxEnqueue",
+    jobId: "job-processing-failure",
+    quality: "high",
+    assets: [{ pinId: "6", boardSlug: "board", title: "failure", imageUrl: "https://i.pinimg.com/736x/e/failure.jpg" }]
+  });
+  await waitUntil(() => harness.progress.some((item) => item.status?.done));
+  assert.equal(harness.downloadCalls.length, 0);
+  const final = harness.progress.findLast((item) => item.status?.done).status;
+  assert.equal(final.failed, 1);
+  assert.equal(final.processingFailed, 1);
+  assert.equal(final.lastError, "JPEG 编码失败");
 });

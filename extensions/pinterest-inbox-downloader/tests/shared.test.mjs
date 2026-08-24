@@ -15,6 +15,9 @@ async function loadShared() {
 
 test("derives stable board, pin, and safe Inbox filenames", async () => {
   const shared = await loadShared();
+  assert.equal(shared.DEFAULT_DOWNLOAD_QUALITY, "high");
+  assert.equal(shared.normalizeDownloadQuality("light"), "light");
+  assert.equal(shared.normalizeDownloadQuality("unknown"), "high");
   assert.equal(shared.parsePinId("https://www.pinterest.com/pin/123456/"), "123456");
   assert.equal(shared.boardSlugFromUrl("https://www.pinterest.com/panda/Character-Ideas/section/"), "character-ideas");
   assert.equal(shared.cleanPinTitle("其中包括图片：ruggie bucchi poster !!"), "ruggie bucchi poster !!");
@@ -63,15 +66,27 @@ test("accepts only static HTTPS pinimg assets and selects the largest srcset", a
 
 test("manifest keeps the browser permission surface narrow", async () => {
   const manifest = JSON.parse(await readFile(new URL("manifest.json", extensionRoot), "utf8"));
-  assert.deepEqual(manifest.permissions, ["downloads"]);
+  assert.deepEqual(manifest.permissions, ["downloads", "offscreen", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://*.pinterest.com/*", "https://*.pinimg.com/*"]);
   assert.deepEqual(manifest.content_scripts[0].matches, ["https://*.pinterest.com/*"]);
 });
 
-test("content panel exposes a functional pause control", async () => {
+test("content panel exposes pause and persistent image-quality controls", async () => {
   const content = await readFile(new URL("content.js", extensionRoot), "utf8");
   assert.match(content, /id="toggleEnabled"/);
   assert.match(content, /if \(!enabled\) return;/);
   assert.match(content, /采集已暂停/);
+  assert.match(content, /data-quality="original"/);
+  assert.match(content, /data-quality="high"/);
+  assert.match(content, /data-quality="light"/);
+  assert.match(content, /chrome\.storage\.local/);
   assert.ok(content.indexOf("pinrep-footer-organic-title") < content.indexOf('image.getAttribute("alt")'));
+});
+
+test("offscreen processor preserves transparency and emits JPEG quality presets", async () => {
+  const processor = await readFile(new URL("offscreen.js", extensionRoot), "utf8");
+  assert.match(processor, /transparent\s+\? \{ type: "image\/png" \}/);
+  assert.match(processor, /message\.quality === "light" \? 0\.8 : 0\.9/);
+  assert.match(processor, /maxEdge = message\.quality === "light" \? 2048/);
+  assert.match(processor, /URL\.revokeObjectURL/);
 });

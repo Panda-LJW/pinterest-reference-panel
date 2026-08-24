@@ -1,5 +1,15 @@
 # 变更日志
 
+## 2026-08-24 — 三档保存质量与轻量引用版
+
+- 任务目标：在 originals 质量优先的基础上加入可选保存质量，并让 Codex 引用默认使用更适合模型上传的轻量副本。
+- 修改文件：Chrome 扩展 `shared.js`、`background.js`、`content.js`、manifest、新增 Offscreen 图片处理页与扩展测试；Codex 插件 `workspace.ts`、`server.ts`、运行时 bundle、版本与工作区测试；同步更新 README、SPEC、package lock 和日志索引。
+- 关键决策：扩展默认“高清”，提供原图/高清/轻量三档并用 `chrome.storage.local` 记忆；所有档位先获取 Pinterest CDN originals，原图档保留原字节，高质量档使用全分辨率 JPEG90，轻量档使用最长边 2048px/JPEG80；高清/轻量检测透明通道并输出 PNG。Codex 导入单独从 Inbox 当前资产生成最长边 2048px/JPEG80 引用版，透明素材保持 PNG，缓存位于 `~/Library/Caches/pinterest-reference-panel/references/`，不修改 Inbox。
+- 稳定性与安全：Chrome 转换在最小权限 Offscreen 文档完成，转换失败明确计数；临时 Blob URL 下载结束即释放并有超时兜底。Codex 的 `sips` 不可用或处理失败时原样导入并返回 `fallback` 原因，工作区令牌、路径边界、符号链接防逃逸和禁止覆盖保持不变。
+- 验证结果：TypeScript 检查、MCP bundle 构建和 24/24 Node 自动测试通过；新增质量配置、Offscreen 输出格式、队列转换及失败可见性、2048/JPEG80 缓存复用和透明 PNG 测试。真实 macOS 样本由 2,737,537 bytes、1587×2245 的无透明 PNG 生成 818,655 bytes、1447×2048 的 JPEG80，源文件未修改。插件清单在临时 PyYAML 虚拟环境验证通过，并已重装为 `0.3.0+codex.20260824145639`。
+- 未解决事项：Chrome 0.3.0 仍需在用户浏览器重新加载后，分别对原图/高清/轻量执行真实下载，确认 Offscreen Blob 下载与透明图行为；Codex 插件需新建任务后验收单击引用、缓存复用和对话路径发送。验收前 README 继续标记为候选版。
+- 回滚提示：回退本轮提交并重新加载 Chrome 扩展/Codex 插件即可；Inbox 与已导入素材不会被自动删除，新引用缓存可单独清理。
+
 ## 2026-08-24 — Pin 结构化标题优先
 
 - 任务目标：移除扩展下载文件名中的“其中包括图片”无障碍描述前缀。

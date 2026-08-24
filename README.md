@@ -2,7 +2,7 @@
 
 一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件以 Pins / Boards 瀑布流浏览，并把选中素材安全导入当前工作区。
 
-当前状态：**0.2.3 MVP 候选版**。真实登录态下的 Chrome originals 下载已确认；新增的结构化标题提取和“整板下载 → Codex 导入 → 当前任务读取”仍需完成真实端到端验收。
+当前状态：**0.3.0 MVP 候选版**。真实登录态下的 Chrome originals 下载已确认；三档图片质量、轻量引用版和“整板下载 → Codex 导入 → 当前任务读取”仍需完成真实端到端验收。
 
 ## 已实现能力
 
@@ -17,6 +17,12 @@
 - 单击 Pin 安全复制到 `references/pinterest/<board>/`；
 - 导入后自动发送工作区相对路径，消息失败可重试而不重复复制。
 
+## 0.3.0 待人工验收
+
+- 扩展面板新增“原图 / 高清 / 轻量”质量按钮并记住用户选择；默认高清为全分辨率 JPEG 90，轻量为最长边 2048px、JPEG 80；
+- 原图模式保持 originals 原始字节与格式；高清/轻量的透明素材输出 PNG，不透明素材输出 JPEG；
+- Codex 单击引用时自动准备最长边 2048px、JPEG 80 的轻量副本；透明素材保持 PNG，衍生文件独立缓存，不反向修改 Inbox。
+
 ## 安装 Chrome 扩展
 
 1. 在 Chrome 打开 `chrome://extensions`；
@@ -24,7 +30,7 @@
 3. 点击“加载已解压的扩展程序”；
 4. 选择 `extensions/pinterest-inbox-downloader/`。
 
-打开 Pinterest 后，右上方会出现 Pinterest Inbox 控制面板。默认“单张模式”会拦截普通 Pin 单击并下载；需要正常打开 Pin 时，点击面板上的“暂停”即可，无需进入 Chrome 扩展管理页。多选与整板模式会显示成功、跳过、无 originals 原图、失败和待处理数量。
+打开 Pinterest 后，右上方会出现 Pinterest Inbox 控制面板。默认“单张模式”会拦截普通 Pin 单击并下载，默认保存质量是“高清”；需要正常打开 Pin 时，点击面板上的“暂停”即可。多选与整板模式会显示成功、跳过、无 originals 原图、图片处理失败和待处理数量。
 
 ## 安装 Codex 插件
 
@@ -43,7 +49,7 @@ codex plugin add pinterest-reference-panel@personal
 
 ```text
 ~/Downloads/PinterestInbox/                       # 原始下载素材
-~/Library/Caches/pinterest-reference-panel/       # 可安全清理的缩略图缓存
+~/Library/Caches/pinterest-reference-panel/       # 可安全清理的缩略图与引用衍生缓存
 <workspace>/references/pinterest/<board>/         # 明确点击后导入的任务素材
 ```
 

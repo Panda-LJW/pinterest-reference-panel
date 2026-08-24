@@ -3,6 +3,7 @@ importScripts("shared.js");
 const {
   buildDownloadFilename,
   isPinterestImageUrl,
+  normalizeDownloadQuality,
   originalExtensionForContentType,
   originalImageCandidates
 } = globalThis.PinterestInboxShared;
@@ -12,6 +13,7 @@ const waiters = new Map();
 const desiredFilenames = new Map();
 let activeItem = null;
 let running = false;
+let offscreenCreation = null;
 
 function sendToTab(tabId, payload) {
   if (!Number.isInteger(tabId)) return;
@@ -25,11 +27,70 @@ function publicJob(job) {
     success: job.success,
     skipped: job.skipped,
     originalUnavailable: job.originalUnavailable,
+    processingFailed: job.processingFailed,
+    lastError: job.lastError,
+    quality: job.quality,
     failed: job.failed,
     pending: job.pending,
     cancelled: job.cancelled,
     done: job.pending === 0
   };
+}
+
+async function ensureOffscreenDocument() {
+  if (!chrome.offscreen?.createDocument) throw new Error("当前 Chrome 不支持 Offscreen 图片处理");
+  if (offscreenCreation) return offscreenCreation;
+  offscreenCreation = (async () => {
+    const exists = typeof chrome.offscreen.hasDocument === "function"
+      ? await chrome.offscreen.hasDocument()
+      : (await chrome.runtime.getContexts?.({ contextTypes: ["OFFSCREEN_DOCUMENT"] }) ?? []).length > 0;
+    if (!exists) {
+      await chrome.offscreen.createDocument({
+        url: "offscreen.html",
+        reasons: ["BLOBS"],
+        justification: "Resize and encode user-selected Pinterest images before saving them."
+      });
+    }
+  })().finally(() => { offscreenCreation = null; });
+  return offscreenCreation;
+}
+
+function sendRuntimeMessage(message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      const error = chrome.runtime.lastError;
+      if (error) reject(new Error(error.message));
+      else resolve(response);
+    });
+  });
+}
+
+async function prepareDownloadAsset(original, quality) {
+  if (quality === "original") return { ...original, requestId: null };
+  await ensureOffscreenDocument();
+  const requestId = crypto.randomUUID();
+  const response = await sendRuntimeMessage({
+    type: "pinterestInboxConvertImage",
+    requestId,
+    url: original.url,
+    quality
+  });
+  if (!response?.ok || typeof response.url !== "string" || ![".jpg", ".png"].includes(response.extension)) {
+    throw new Error(response?.error || "图片处理失败");
+  }
+  return {
+    url: response.url,
+    extension: response.extension,
+    requestId,
+    sourceUrl: original.url,
+    sourceBytes: response.sourceBytes,
+    outputBytes: response.outputBytes
+  };
+}
+
+function releasePreparedAsset(prepared) {
+  if (!prepared?.requestId) return;
+  chrome.runtime.sendMessage({ type: "pinterestInboxRevokeImage", requestId: prepared.requestId }, () => void chrome.runtime.lastError);
 }
 
 function report(job) {
@@ -93,14 +154,25 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
 async function runItem(item, job) {
   const original = await resolveOriginalAsset(item.asset);
   if (!original) return "unsupported";
-  const filename = buildDownloadFilename(item.asset, original.extension);
-  desiredFilenames.set(original.url, filename);
+  let prepared;
+  try {
+    prepared = await prepareDownloadAsset(original, job.quality);
+    if (job.cancelled) {
+      releasePreparedAsset(prepared);
+      return "cancelled";
+    }
+  } catch (error) {
+    job.lastError = error instanceof Error ? error.message : String(error);
+    return job.cancelled ? "cancelled" : "processing-failed";
+  }
+  const filename = buildDownloadFilename(item.asset, prepared.extension);
+  desiredFilenames.set(prepared.url, filename);
   try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       if (job.cancelled) return "cancelled";
       try {
         const downloadId = await startDownload({
-          url: original.url,
+          url: prepared.url,
           filename,
           conflictAction: "overwrite",
           saveAs: false
@@ -115,7 +187,8 @@ async function runItem(item, job) {
     }
     return job.cancelled ? "cancelled" : "failed";
   } finally {
-    desiredFilenames.delete(original.url);
+    desiredFilenames.delete(prepared.url);
+    releasePreparedAsset(prepared);
   }
 }
 
@@ -167,6 +240,10 @@ async function pumpQueue() {
     const result = await runItem(item, job);
     if (result === "complete") job.success += 1;
     else if (result === "failed") job.failed += 1;
+    else if (result === "processing-failed") {
+      job.failed += 1;
+      job.processingFailed += 1;
+    }
     else {
       job.skipped += 1;
       if (result === "unsupported") job.originalUnavailable += 1;
@@ -202,6 +279,9 @@ function enqueue(message, tabId) {
     success: 0,
     skipped,
     originalUnavailable: 0,
+    processingFailed: 0,
+    lastError: null,
+    quality: normalizeDownloadQuality(message.quality),
     failed: 0,
     pending: uniqueAssets.size,
     cancelled: false

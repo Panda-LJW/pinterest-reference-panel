@@ -21424,9 +21424,15 @@ var InboxService = class {
 
 // src/workspace.ts
 import { createHash as createHash2, randomBytes } from "node:crypto";
-import { constants } from "node:fs";
-import { access, copyFile, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, stat as stat2 } from "node:fs/promises";
+import { execFile as execFile2 } from "node:child_process";
+import { constants, existsSync as existsSync2 } from "node:fs";
+import { access, copyFile, lstat, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
+import { homedir as homedir2 } from "node:os";
 import { basename as basename2, dirname, extname as extname2, join as join2, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { promisify as promisify2 } from "node:util";
+var execFileAsync2 = promisify2(execFile2);
+var REFERENCE_MAX_EDGE = 2048;
+var REFERENCE_JPEG_QUALITY = 80;
 function isWithin2(root, candidate) {
   const pathFromRoot = relative2(root, candidate);
   return pathFromRoot === "" || !pathFromRoot.startsWith(`..${sep2}`) && pathFromRoot !== "..";
@@ -21438,8 +21444,23 @@ function safeSegment(value) {
 async function fileHash(path) {
   return createHash2("sha256").update(await readFile2(path)).digest("hex");
 }
+function parseSipsProperties(stdout) {
+  const property = (name) => stdout.match(new RegExp(`^\\s*${name}:\\s*(.+)\\s*$`, "mi"))?.[1]?.trim() ?? null;
+  const width = Number.parseInt(property("pixelWidth") ?? "", 10);
+  const height = Number.parseInt(property("pixelHeight") ?? "", 10);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) throw new Error("\u65E0\u6CD5\u8BFB\u53D6\u56FE\u7247\u5C3A\u5BF8");
+  return { width, height, hasAlpha: /^(yes|true)$/i.test(property("hasAlpha") ?? "") };
+}
 var WorkspaceRegistry = class {
   roots = /* @__PURE__ */ new Map();
+  derivativeCacheRoot;
+  imageProcessorPath;
+  platform;
+  constructor(options = {}) {
+    this.derivativeCacheRoot = resolve2(options.derivativeCacheRoot ?? join2(homedir2(), "Library", "Caches", "pinterest-reference-panel", "references"));
+    this.imageProcessorPath = options.imageProcessorPath ?? "/usr/bin/sips";
+    this.platform = options.platform ?? process.platform;
+  }
   async register(candidate) {
     if (!candidate) return { available: false, name: null, token: null, reason: "Codex \u672A\u63D0\u4F9B\u5F53\u524D\u5DE5\u4F5C\u533A\u8DEF\u5F84" };
     try {
@@ -21461,25 +21482,76 @@ var WorkspaceRegistry = class {
     await mkdir2(destinationDirectory, { recursive: true });
     const canonicalDestinationDirectory = await realpath2(destinationDirectory);
     if (!isWithin2(canonicalRoot, canonicalDestinationDirectory)) throw new Error("\u5DE5\u4F5C\u533A\u5B50\u76EE\u5F55\u6307\u5411\u4E86\u6839\u76EE\u5F55\u4E4B\u5916");
-    const extension = extname2(asset.sourcePath).toLowerCase();
-    const stem = safeSegment(basename2(asset.sourcePath, extension));
-    const sourceDigest = await fileHash(asset.sourcePath);
+    const prepared = await this.prepareReference(asset);
+    const extension = prepared.extension;
+    const stem = safeSegment(basename2(asset.sourcePath, extname2(asset.sourcePath)));
+    const sourceDigest = await fileHash(prepared.path);
     let destinationPath = join2(canonicalDestinationDirectory, `${stem}${extension}`);
     try {
-      if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true);
+      if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
       destinationPath = join2(canonicalDestinationDirectory, `${stem}-${sourceDigest.slice(0, 8)}${extension}`);
       try {
-        if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true);
+        if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
       } catch {
       }
     } catch {
     }
     if (!isWithin2(canonicalRoot, await realpath2(dirname(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
-    await copyFile(asset.sourcePath, destinationPath, constants.COPYFILE_EXCL);
-    return this.result(canonicalRoot, destinationPath, false);
+    await copyFile(prepared.path, destinationPath, constants.COPYFILE_EXCL);
+    return this.result(canonicalRoot, destinationPath, false, prepared);
   }
-  result(workspaceRoot, destinationPath, reused) {
-    return { relativePath: relative2(workspaceRoot, destinationPath).split(sep2).join("/"), fileName: basename2(destinationPath), reused };
+  async prepareReference(asset) {
+    const sourceExtension = extname2(asset.sourcePath).toLowerCase() === ".jpeg" ? ".jpg" : extname2(asset.sourcePath).toLowerCase();
+    const fallback = (reason) => ({
+      path: asset.sourcePath,
+      extension: sourceExtension,
+      optimization: "fallback",
+      cacheReused: false,
+      reason
+    });
+    if (this.platform !== "darwin" || !existsSync2(this.imageProcessorPath)) return fallback("macOS sips \u4E0D\u53EF\u7528\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6");
+    let temporaryPath = null;
+    try {
+      const inspected = await execFileAsync2(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15e3 });
+      const properties = parseSipsProperties(inspected.stdout);
+      const withinReferenceSize = Math.max(properties.width, properties.height) <= REFERENCE_MAX_EDGE;
+      const reusableFormat = properties.hasAlpha ? sourceExtension === ".png" : sourceExtension === ".jpg";
+      if (withinReferenceSize && reusableFormat) {
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: true, reason: null };
+      }
+      const targetExtension = properties.hasAlpha ? ".png" : ".jpg";
+      const recipe = properties.hasAlpha ? `png-${REFERENCE_MAX_EDGE}` : `jpeg-${REFERENCE_MAX_EDGE}-q${REFERENCE_JPEG_QUALITY}`;
+      const digest = await fileHash(asset.sourcePath);
+      await mkdir2(this.derivativeCacheRoot, { recursive: true });
+      const canonicalCacheRoot = await realpath2(this.derivativeCacheRoot);
+      const cachePath = join2(canonicalCacheRoot, `${digest.slice(0, 32)}-${recipe}${targetExtension}`);
+      if (existsSync2(cachePath)) {
+        const cachedStat = await lstat(cachePath);
+        if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("\u5F15\u7528\u7F13\u5B58\u4E0D\u662F\u5B89\u5168\u7684\u666E\u901A\u6587\u4EF6");
+        return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: true, reason: null };
+      }
+      temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp${targetExtension}`;
+      const formatArguments = properties.hasAlpha ? ["-s", "format", "png"] : ["-s", "format", "jpeg", "-s", "formatOptions", String(REFERENCE_JPEG_QUALITY)];
+      await execFileAsync2(this.imageProcessorPath, ["-Z", String(REFERENCE_MAX_EDGE), ...formatArguments, asset.sourcePath, "--out", temporaryPath], { timeout: 6e4 });
+      if ((await stat2(temporaryPath)).size < 1) throw new Error("\u751F\u6210\u7684\u5F15\u7528\u56FE\u7247\u4E3A\u7A7A");
+      await rename2(temporaryPath, cachePath);
+      temporaryPath = null;
+      return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: false, reason: null };
+    } catch (error2) {
+      return fallback(error2 instanceof Error ? `\u5F15\u7528\u7248\u751F\u6210\u5931\u8D25\uFF1A${error2.message}` : "\u5F15\u7528\u7248\u751F\u6210\u5931\u8D25");
+    } finally {
+      if (temporaryPath) await rm2(temporaryPath, { force: true });
+    }
+  }
+  result(workspaceRoot, destinationPath, reused, prepared) {
+    return {
+      relativePath: relative2(workspaceRoot, destinationPath).split(sep2).join("/"),
+      fileName: basename2(destinationPath),
+      reused,
+      optimization: prepared.optimization,
+      cacheReused: prepared.cacheReused,
+      optimizationReason: prepared.reason
+    };
   }
 };
 
@@ -21490,7 +21562,7 @@ var panelHtml = readFileSync(join3(moduleDirectory, "../assets/pinterest-panel.h
 var inbox = new InboxService();
 var workspaces = new WorkspaceRegistry();
 var server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.2.0" },
+  { name: "pinterest-reference-panel", version: "0.3.0" },
   {
     capabilities: { resources: {}, tools: {} },
     instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
@@ -21613,9 +21685,10 @@ server.registerTool(
     if (!asset) return { isError: true, content: [{ type: "text", text: "\u672A\u627E\u5230\u8BE5 Inbox \u56FE\u7247\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5\u3002" }] };
     try {
       const imported = await workspaces.importAsset(asset, workspaceToken);
+      const optimizationNote = imported.optimization === "fallback" ? `\uFF08${imported.optimizationReason}\uFF09` : "\uFF08\u5DF2\u51C6\u5907\u8F7B\u91CF\u5F15\u7528\u7248\uFF09";
       return {
         structuredContent: { status: "imported", assetId, title: asset.title, boardTitle: asset.boardTitle, ...imported },
-        content: [{ type: "text", text: `\u5DF2\u5C06\u300C${asset.title}\u300D\u5BFC\u5165\u5DE5\u4F5C\u533A\uFF1A${imported.relativePath}` }]
+        content: [{ type: "text", text: `\u5DF2\u5C06\u300C${asset.title}\u300D\u5BFC\u5165\u5DE5\u4F5C\u533A\uFF1A${imported.relativePath}${optimizationNote}` }]
       };
     } catch (error2) {
       return { isError: true, content: [{ type: "text", text: error2 instanceof Error ? error2.message : String(error2) }] };
