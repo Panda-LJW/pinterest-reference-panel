@@ -25,6 +25,13 @@
     }
   }
 
+  function cleanPinTitle(value, fallback = "pinterest-image") {
+    const withoutAccessibilityPrefix = String(value ?? "")
+      .replace(/^其中包括图片\s*[：:]?\s*/u, "")
+      .trim();
+    return safeSegment(withoutAccessibilityPrefix, fallback, 96);
+  }
+
   function boardSlugFromUrl(value) {
     try {
       const url = new URL(value, "https://www.pinterest.com/");
@@ -112,6 +119,7 @@
     bestSrcsetUrl,
     boardSlugFromUrl,
     buildDownloadFilename,
+    cleanPinTitle,
     extensionForUrl,
     isPinterestImageUrl,
     originalExtensionForContentType,

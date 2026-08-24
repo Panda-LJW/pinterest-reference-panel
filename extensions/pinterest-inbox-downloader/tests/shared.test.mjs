@@ -17,6 +17,8 @@ test("derives stable board, pin, and safe Inbox filenames", async () => {
   const shared = await loadShared();
   assert.equal(shared.parsePinId("https://www.pinterest.com/pin/123456/"), "123456");
   assert.equal(shared.boardSlugFromUrl("https://www.pinterest.com/panda/Character-Ideas/section/"), "character-ideas");
+  assert.equal(shared.cleanPinTitle("其中包括图片：ruggie bucchi poster !!"), "ruggie bucchi poster !!");
+  assert.equal(shared.cleanPinTitle("其中包括图片：", "pin-123"), "pin-123");
   assert.equal(shared.buildDownloadFilename({
     boardSlug: "Character Ideas",
     pinId: "123456",
@@ -71,4 +73,5 @@ test("content panel exposes a functional pause control", async () => {
   assert.match(content, /id="toggleEnabled"/);
   assert.match(content, /if \(!enabled\) return;/);
   assert.match(content, /采集已暂停/);
+  assert.ok(content.indexOf("pinrep-footer-organic-title") < content.indexOf('image.getAttribute("alt")'));
 });

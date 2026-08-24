@@ -23,6 +23,7 @@
 
 每张图先探测 Pinterest CDN `originals` 原图：优先原生 JPG/PNG，如果原图只有 WebP 则原样保留 WebP。扩展不转码、不伪改后缀，也不回退到低分辨率缩略图。
 文件名使用“标题在前、Pin ID 在后”，方便浏览并保持稳定去重，例如 `Modern Pink Dinosaur__pin-123456.jpg`。
+标题优先读取 Pinterest 卡片的结构化标题节点，不把图片 `alt` 中的“其中包括图片”等无障碍描述写入文件名。
 为避免 Chrome 退回 CDN 哈希名，扩展同时在下载请求和最终文件名确定事件中提交相同目标名。
 
 视频 Pin、HLS、无有效 `pinimg.com` 地址或无可用 originals 原图的项目会被跳过。每个失败下载会自动重试一次；相同 Pin 使用确定性文件名和 `overwrite`，不会写入 `PinterestInbox` 以外的位置。

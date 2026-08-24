@@ -75,12 +75,12 @@
     const image = anchor.querySelector("img") ?? card.querySelector("img");
     const imageUrl = image ? bestImageUrl(image) : null;
     if (!imageUrl) return { asset: null, reason: "无静态图片" };
-    const title = image.getAttribute("alt") || card.getAttribute("aria-label") || `pin-${pinId}`;
+    const title = titleFromCard(card, image, pinId);
     return {
       asset: {
         pinId,
         boardSlug: shared.boardSlugFromUrl(location.href),
-        title: shared.safeSegment(title, `pin-${pinId}`, 96),
+        title,
         imageUrl
       },
       reason: null
@@ -89,6 +89,14 @@
 
   function selectedKey(anchor) {
     return shared.parsePinId(anchor.href);
+  }
+
+  function titleFromCard(card, image, pinId) {
+    const structuredTitle = card.querySelector('[data-test-id="pinrep-footer-organic-title"]')?.textContent
+      || card.querySelector('[data-test-id="pinrep-footer"] h2')?.textContent
+      || card.querySelector("h2")?.textContent;
+    const firstVisibleLine = card.innerText?.split("\n").map((line) => line.trim()).find(Boolean);
+    return shared.cleanPinTitle(structuredTitle || firstVisibleLine || image.getAttribute("alt"), `pin-${pinId}`);
   }
 
   function refreshSelectedUi() {
