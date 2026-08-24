@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-08-24 — Pinterest Inbox MVP 候选版
+
+- 任务目标：将 Phase 0 假数据原型升级为 macOS + Chrome 可运行的本地素材闭环，覆盖单张、多选、整板下载、Inbox 监听、Codex 浏览和工作区安全导入。
+- 修改文件：新增 `extensions/pinterest-inbox-downloader/`；新增 MCP `src/inbox.ts`、`src/workspace.ts` 与对应测试；重写 `src/server.ts` 和 `assets/pinterest-panel.html`；删除假数据模块；更新插件清单、包脚本、运行时 bundle、README 与 SPEC。
+- 关键决策：不接 Pinterest API 或账号凭证；Chrome 权限限定为 `downloads` 和 Pinterest 页面；下载固定进入 `Downloads/PinterestInbox`；缩略图与随机工作区令牌只进入 UI 私有 `_meta`；MCP 导入只接受已索引资产，目标固定在工作区 `references/pinterest` 内；不新增生产依赖或常驻系统服务。
+- 验证结果：TypeScript 与 bundle 构建通过；15/15 Node 自动测试通过；真实 macOS `sips` 缩略图通过；380px 面板浏览器实测通过，页面滚动 604px 后 sticky 顶栏仍为 `top=0`，单击 Pin 后进入“✓ 已加入当前任务”；隔离的 Chrome for Testing 已在真实 Pinterest 首页成功加载 Manifest V3 扩展并注入单张/多选/整板控制面板，未触发实际下载。
+- 未解决事项：尚未在用户登录态执行真实多选与整板下载；Codex 宿主是否提供 `roots/list`、`ui/message` 是否在当前桌面版本成功以及最终图片读取仍需新任务内人工验收；MVP 在验收前仅标记为候选版。
+- 回滚提示：禁用或卸载 Chrome 扩展、禁用 Codex 插件，或回退本分支提交即可；Inbox、已导入素材和缩略图缓存不会被程序自动删除，缓存可单独清理。
+
 ## 2026-08-22 — 建立 Private GitHub 主仓库
 
 - 任务目标：创建以当前插件为核心的 Private GitHub 仓库，并建立可持续版本迭代与开发流程。

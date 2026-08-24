@@ -1,69 +1,78 @@
-# Pinterest 素材栏 for Codex
+# Pinterest Inbox for Codex
 
-这是一个处于 Phase 0 的本地 Codex 插件原型：用 MCP Apps UI 模拟只读的 Pinterest `Pins / Boards` 素材抽屉，验证它在 Codex 桌面端中的实际渲染位置和窄栏体验。
+一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件以 Pins / Boards 瀑布流浏览，并把选中素材安全导入当前工作区。
 
-当前状态：**代码、构建、浏览器窄栏渲染与本地安装已验证；尚待用户在新 Codex 任务中确认宿主实际展示位置。**
+当前状态：**0.2.0 MVP 候选版**。本地文件链路、MCP、浏览器面板和 Chrome 内容脚本已经自动验证；真实账号下的“整板下载 → Codex 导入 → 当前任务读取”仍等待用户端到端验收，因此尚未标记为正式完成。
 
-![Pinterest 素材栏预览](docs/images/preview.png)
+## 已实现能力
 
-## 当前能力
+- Chrome 单张、多选和整板自动滚动下载；
+- 固定写入 `~/Downloads/PinterestInbox/<board>/`；
+- 静态图片过滤、串行限速、取消、失败重试一次和结果统计；
+- MCP 启动完整扫描、运行期监听、10 秒周期校准与手动刷新；
+- `sips` 生成 480px JPEG 缩略图并独立缓存；
+- Pins / Boards 窄栏瀑布流与固定顶部栏；
+- 单击 Pin 安全复制到 `references/pinterest/<board>/`；
+- 导入后自动发送工作区相对路径，消息失败可重试而不重复复制。
 
-- 双列瀑布流 Pin 浏览；
-- Pins / Boards 标签切换；
-- 固定在内容上层的品牌栏与标签栏；
-- 图版筛选、Pin 选择和模拟引用交互；
-- MCP Apps 标准 UI 资源与本地 stdio MCP 服务；
-- 全程使用本地假数据，不连接 Pinterest。
+## 安装 Chrome 扩展
 
-## 明确边界
+1. 在 Chrome 打开 `chrome://extensions`；
+2. 开启“开发者模式”；
+3. 点击“加载已解压的扩展程序”；
+4. 选择 `extensions/pinterest-inbox-downloader/`。
 
-- 不登录 Pinterest；
-- 不搜索全站内容；
-- 不创建、保存、修改或删除 Pin；
-- 不下载真实图片；
-- 插件不能通过公开 API 强制指定右侧停靠，位置由 Codex 宿主决定。
+打开 Pinterest 后，右上方会出现 Pinterest Inbox 控制面板。默认“单张模式”会拦截普通 Pin 单击并下载；需要正常打开 Pin 时，可暂时禁用扩展。多选与整板模式会在面板中显示成功、跳过、失败和待处理数量。
 
-## 本地开发
-
-```bash
-npm ci
-npm test
-```
-
-## 安装到 Codex
-
-克隆仓库并完成构建：
+## 安装 Codex 插件
 
 ```bash
 git clone https://github.com/Panda-LJW/pinterest-reference-panel.git
 cd pinterest-reference-panel
 npm ci
-npm run build
-```
-
-注册仓库内 marketplace 并安装插件：
-
-```bash
+npm test
 codex plugin marketplace add "$PWD"
 codex plugin add pinterest-reference-panel@personal
 ```
 
-插件更新后需要开启一个新的 Codex 任务，才能加载新的 MCP 工具和 UI 资源。
+插件更新后需要开启一个新的 Codex 任务，新的 MCP 工具和 UI 才会加载。打开面板时应把当前工作区绝对路径传给 `render_pinterest_reference_panel`；如果 Codex 宿主提供单一 MCP root，插件也会优先自动识别。
+
+## 本地目录
+
+```text
+~/Downloads/PinterestInbox/                       # 原始下载素材
+~/Library/Caches/pinterest-reference-panel/       # 可安全清理的缩略图缓存
+<workspace>/references/pinterest/<board>/         # 明确点击后导入的任务素材
+```
+
+可在启动 MCP 时通过 `PINTEREST_INBOX_DIR` 覆盖 Inbox。Chrome 扩展仍受 Downloads API 限制，只能下载到浏览器 Downloads 根目录下的相对路径。
+
+## 本地开发与测试
+
+```bash
+npm ci
+npm run check
+npm test
+```
+
+测试覆盖 Inbox 扫描与监听、缩略图、工作区边界、MCP 往返、UI 结构、扩展路径清理和下载队列。涉及 Pinterest 登录态、真实 Downloads 写入和 Codex 宿主消息的最终链路需要按 [SPEC.md](SPEC.md) 的人工端到端步骤验收。
 
 ## 仓库结构
 
-- `plugins/pinterest-reference-panel/`：插件清单、MCP 服务、UI、测试与运行时 bundle；
-- `.agents/plugins/marketplace.json`：本地 marketplace 清单；
-- `SPEC.md`：稳定边界与验收标准；
-- `LOG.md` / `LOG-INDEX.md`：变更决策、验证与回滚记录。
+- `extensions/pinterest-inbox-downloader/`：Manifest V3 Chrome 下载扩展；
+- `plugins/pinterest-reference-panel/`：Codex 插件、MCP 服务、UI、测试和运行时 bundle；
+- `.agents/plugins/marketplace.json`：仓库内 Codex marketplace；
+- `SPEC.md`：稳定边界、接口和验收标准；
+- `LOG.md` / `LOG-INDEX.md`：施工决策、验证和回滚记录。
 
-## 开发与版本策略
+## 边界
 
-- `main` 保持可安装、可运行；
-- 功能开发使用 `codex/*` 分支并通过 Pull Request 合并；
-- 插件语义版本记录功能阶段，Codex cachebuster 仅用于本地重装；
-- 每次代码或配置修改同步更新 `LOG.md` 与 `LOG-INDEX.md`。
+- 不接 Pinterest API，不读取或保存账号凭证；
+- 不搜索全站内容，不创建、保存、修改或删除 Pin；
+- 不下载视频；
+- MCP 不接受任意 URL 或任意写入路径；
+- 插件无法强制决定 Codex 的右侧停靠位置。
 
 ## 声明
 
-这是一个非官方实验项目，与 Pinterest 无隶属或背书关系。当前原型只使用本地假数据。
+这是一个非官方实验项目，与 Pinterest 无隶属或背书关系。请确认你有权下载和使用相应素材。
