@@ -4,6 +4,7 @@
   if (document.getElementById("pinterest-inbox-extension-root")) return;
   const shared = globalThis.PinterestInboxShared;
   const selected = new Map();
+  let enabled = true;
   let mode = "quick";
   let currentJobId = null;
   let scanningBoard = false;
@@ -16,14 +17,14 @@
   shadow.innerHTML = `
     <style>
       *{box-sizing:border-box} .panel{width:248px;padding:12px;border:1px solid rgba(17,17,17,.12);border-radius:18px;background:rgba(255,255,255,.96);box-shadow:0 12px 36px rgba(0,0,0,.15);backdrop-filter:blur(18px);color:#161616}
-      .head{display:flex;align-items:center;gap:9px;margin-bottom:10px}.mark{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e60023;color:white;font:700 18px Georgia}.title{font-weight:750;font-size:14px}.sub{margin-top:1px;color:#777;font-size:11px}
+      [hidden]{display:none!important}.head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:10px}.identity{display:flex;align-items:center;gap:9px;min-width:0}.mark{display:grid;place-items:center;width:30px;height:30px;flex:0 0 auto;border-radius:50%;background:#e60023;color:white;font:700 18px Georgia}.title{font-weight:750;font-size:14px}.sub{margin-top:1px;overflow:hidden;color:#777;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
       .modes,.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.actions{margin-top:7px}.wide{grid-column:1/-1}button{border:0;border-radius:11px;padding:8px 9px;background:#f1f1f1;color:#222;font:650 12px inherit;cursor:pointer}button:hover{background:#e7e7e7}button.active{background:#111;color:#fff}button.primary{background:#e60023;color:#fff}button:disabled{cursor:not-allowed;opacity:.45}
-      .status{min-height:32px;margin-top:9px;padding:8px 9px;border-radius:10px;background:#f7f7f7;color:#595959;font-size:11px;line-height:1.45}.cancel{margin-top:7px;width:100%;background:#fff0f1;color:#b6001b}.hidden{display:none}
+      .power{flex:0 0 auto;padding:6px 9px;border:1px solid #dedede;background:#fff;color:#666;font-size:11px}.power:hover{background:#f5f5f5}.power[aria-pressed="false"]{border-color:#111;background:#111;color:#fff}.status{min-height:32px;margin-top:9px;padding:8px 9px;border-radius:10px;background:#f7f7f7;color:#595959;font-size:11px;line-height:1.45}.panel.paused .status{background:#f3f3f3;color:#777}.cancel{margin-top:7px;width:100%;background:#fff0f1;color:#b6001b}.hidden{display:none}
     </style>
     <section class="panel" aria-label="Pinterest Inbox 下载器">
-      <div class="head"><span class="mark">P</span><div><div class="title">Pinterest Inbox</div><div class="sub">下载到 Downloads/PinterestInbox</div></div></div>
-      <div class="modes"><button id="quick" class="active">单张模式</button><button id="multi">多选模式</button></div>
-      <div class="actions"><button id="downloadSelected" disabled>下载已选（0）</button><button id="downloadBoard" class="primary">整板下载</button></div>
+      <div class="head"><div class="identity"><span class="mark">P</span><div><div class="title">Pinterest Inbox</div><div class="sub">Originals 原图优先</div></div></div><button id="toggleEnabled" class="power" aria-pressed="true" aria-label="暂停 Pinterest Inbox 采集">暂停</button></div>
+      <div id="controls"><div class="modes"><button id="quick" class="active">单张模式</button><button id="multi">多选模式</button></div>
+      <div class="actions"><button id="downloadSelected" disabled>下载已选（0）</button><button id="downloadBoard" class="primary">整板下载</button></div></div>
       <div id="status" class="status">单击 Pin 即可下载静态图片。</div>
       <button id="cancel" class="cancel hidden">取消当前任务</button>
     </section>`;
@@ -35,6 +36,9 @@
   const boardButton = shadow.getElementById("downloadBoard");
   const cancelButton = shadow.getElementById("cancel");
   const status = shadow.getElementById("status");
+  const panel = shadow.querySelector(".panel");
+  const controls = shadow.getElementById("controls");
+  const toggleEnabledButton = shadow.getElementById("toggleEnabled");
 
   function setStatus(text) {
     status.textContent = text;
@@ -42,8 +46,8 @@
 
   function setBusy(busy) {
     cancelButton.classList.toggle("hidden", !busy);
-    boardButton.disabled = busy;
-    selectedButton.disabled = busy || selected.size === 0;
+    boardButton.disabled = busy || !enabled;
+    selectedButton.disabled = busy || !enabled || selected.size === 0;
   }
 
   function setMode(nextMode) {
@@ -89,7 +93,7 @@
 
   function refreshSelectedUi() {
     selectedButton.textContent = `下载已选（${selected.size}）`;
-    selectedButton.disabled = selected.size === 0 || Boolean(currentJobId) || scanningBoard;
+    selectedButton.disabled = !enabled || selected.size === 0 || Boolean(currentJobId) || scanningBoard;
   }
 
   function clearSelection() {
@@ -99,8 +103,9 @@
   }
 
   const pageStyle = document.createElement("style");
-  pageStyle.textContent = `a[data-pinterest-inbox-selected="true"]{outline:4px solid #e60023!important;outline-offset:2px!important;border-radius:18px!important}a[href*="/pin/"]:hover{cursor:copy}`;
+  pageStyle.textContent = `a[data-pinterest-inbox-selected="true"]{outline:4px solid #e60023!important;outline-offset:2px!important;border-radius:18px!important}html[data-pinterest-inbox-enabled="true"] a[href*="/pin/"]:hover{cursor:copy}`;
   document.documentElement.append(pageStyle);
+  document.documentElement.setAttribute("data-pinterest-inbox-enabled", "true");
 
   function sendMessage(message) {
     return new Promise((resolve, reject) => {
@@ -117,6 +122,7 @@
   }
 
   async function enqueueAssets(assets, skipped = 0) {
+    if (!enabled) return;
     if (assets.length === 0) {
       setStatus(skipped ? `没有可下载的静态图片，已跳过 ${skipped} 项。` : "没有找到可下载的 Pin。");
       return;
@@ -134,6 +140,7 @@
   }
 
   document.addEventListener("click", (event) => {
+    if (!enabled) return;
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const target = event.target instanceof Element ? event.target : null;
     const anchor = target?.closest('a[href*="/pin/"]');
@@ -211,7 +218,7 @@
     scanningBoard = false;
     if (abortBoardScan) {
       setBusy(false);
-      setStatus(`已取消整板扫描；已发现 ${assets.size} 张，未开始下载。`);
+      setStatus(enabled ? `已取消整板扫描；已发现 ${assets.size} 张，未开始下载。` : "采集已暂停，Pin 点击已恢复 Pinterest 原本行为。");
       return;
     }
     if (reachedSafetyLimit) {
@@ -228,6 +235,34 @@
     void enqueueAssets(assets);
   });
   boardButton.addEventListener("click", () => void collectWholeBoard());
+  toggleEnabledButton.addEventListener("click", async () => {
+    enabled = !enabled;
+    panel.classList.toggle("paused", !enabled);
+    controls.hidden = !enabled;
+    toggleEnabledButton.textContent = enabled ? "暂停" : "启用";
+    toggleEnabledButton.setAttribute("aria-pressed", String(enabled));
+    toggleEnabledButton.setAttribute("aria-label", enabled ? "暂停 Pinterest Inbox 采集" : "启用 Pinterest Inbox 采集");
+    document.documentElement.setAttribute("data-pinterest-inbox-enabled", String(enabled));
+    if (enabled) {
+      setBusy(scanningBoard || Boolean(currentJobId));
+      if (scanningBoard) setStatus("正在停止上一次整板扫描…");
+      else setStatus(mode === "quick" ? "采集已启用。单击 Pin 即可下载 originals 原图。" : "采集已启用。单击 Pin 进行勾选。");
+      return;
+    }
+    abortBoardScan = true;
+    clearSelection();
+    const jobId = currentJobId;
+    currentJobId = null;
+    setBusy(false);
+    setStatus("采集已暂停，Pin 点击已恢复 Pinterest 原本行为。");
+    if (jobId) {
+      try {
+        await sendMessage({ type: "pinterestInboxCancel", jobId });
+      } catch {
+        setStatus("采集已暂停；原下载任务可能已在 Chrome 中完成。");
+      }
+    }
+  });
   cancelButton.addEventListener("click", async () => {
     if (scanningBoard) {
       abortBoardScan = true;
@@ -246,12 +281,13 @@
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type !== "pinterestInboxDownloadProgress" || message.status?.jobId !== currentJobId) return;
     const value = message.status;
-    setStatus(`成功 ${value.success} · 跳过 ${value.skipped} · 失败 ${value.failed} · 待处理 ${value.pending}`);
+    const unavailable = value.originalUnavailable ? `（无 originals 原图 ${value.originalUnavailable}）` : "";
+    setStatus(`成功 ${value.success} · 跳过 ${value.skipped}${unavailable} · 失败 ${value.failed} · 待处理 ${value.pending}`);
     if (value.done || value.cancelled) {
       currentJobId = null;
       setBusy(false);
-      if (value.cancelled) setStatus(`任务已取消。成功 ${value.success} · 跳过 ${value.skipped} · 失败 ${value.failed}`);
-      else setStatus(`下载完成。成功 ${value.success} · 跳过 ${value.skipped} · 失败 ${value.failed}`);
+      if (value.cancelled) setStatus(`任务已取消。成功 ${value.success} · 跳过 ${value.skipped}${unavailable} · 失败 ${value.failed}`);
+      else setStatus(`下载完成。成功 ${value.success} · 跳过 ${value.skipped}${unavailable} · 失败 ${value.failed}`);
     }
   });
 })();

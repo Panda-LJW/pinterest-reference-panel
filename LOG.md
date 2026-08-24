@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-08-24 — 采集开关与 originals 原图优先
+
+- 任务目标：根据真实 Chrome 下载验收结果，增加面板内暂停/启用控制，并将素材策略改为“original 质量优先”。
+- 修改文件：`extensions/pinterest-inbox-downloader/manifest.json`、`shared.js`、`background.js`、`content.js`、扩展测试与 README；同步更新根 `README.md`、`SPEC.md`和日志索引。
+- 关键决策：只探测并下载 Pinterest CDN `originals` 资产；原生 JPG/PNG 优先，它们均不存在而 originals WebP 存在时保留 WebP；以 HTTP `Content-Type` 决定真实后缀，不转码、不改假后缀、不回退低分辨率缩略图。暂停时恢复 Pinterest 原点击行为，清除勾选并取消当前任务。
+- 验证结果：TypeScript 检查与 MCP bundle 构建通过；19/19 Node 自动测试通过，覆盖 originals-only URL、MIME 后缀、原生 WebP 保留、无 originals 跳过、队列重试和暂停控件结构。
+- 未解决事项：更新后的 Chrome 扩展需由用户在 `chrome://extensions` 手动点击“重新加载”，再以同一 Pin 验收下载文件的尺寸、MIME 与后缀；整板到 Codex 导入仍未完成端到端验收。
+- 回滚提示：回退本轮扩展提交并在 Chrome 重新加载即可；现有 Inbox 素材不会被自动删除。
+
 ## 2026-08-24 — Pinterest Inbox MVP 候选版
 
 - 任务目标：将 Phase 0 假数据原型升级为 macOS + Chrome 可运行的本地素材闭环，覆盖单张、多选、整板下载、Inbox 监听、Codex 浏览和工作区安全导入。

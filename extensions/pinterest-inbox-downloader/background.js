@@ -1,6 +1,11 @@
 importScripts("shared.js");
 
-const { buildDownloadFilename, isPinterestImageUrl } = globalThis.PinterestInboxShared;
+const {
+  buildDownloadFilename,
+  isPinterestImageUrl,
+  originalExtensionForContentType,
+  originalImageCandidates
+} = globalThis.PinterestInboxShared;
 const queue = [];
 const jobs = new Map();
 const waiters = new Map();
@@ -18,6 +23,7 @@ function publicJob(job) {
     total: job.total,
     success: job.success,
     skipped: job.skipped,
+    originalUnavailable: job.originalUnavailable,
     failed: job.failed,
     pending: job.pending,
     cancelled: job.cancelled,
@@ -69,12 +75,15 @@ chrome.downloads.onChanged.addListener((delta) => {
 });
 
 async function runItem(item, job) {
+  const original = await resolveOriginalAsset(item.asset);
+  if (!original) return "unsupported";
+  const filename = buildDownloadFilename(item.asset, original.extension);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (job.cancelled) return "cancelled";
     try {
       const downloadId = await startDownload({
-        url: item.asset.imageUrl,
-        filename: item.filename,
+        url: original.url,
+        filename,
         conflictAction: "overwrite",
         saveAs: false
       });
@@ -89,6 +98,44 @@ async function runItem(item, job) {
   return job.cancelled ? "cancelled" : "failed";
 }
 
+async function probeOriginal(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      cache: "no-store",
+      credentials: "omit",
+      redirect: "follow",
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    const resolvedUrl = response.url || url;
+    const extension = originalExtensionForContentType(response.headers.get("content-type"));
+    if (!extension || !isPinterestImageUrl(resolvedUrl)) return null;
+    return { url: resolvedUrl, extension };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveOriginalAsset(asset) {
+  const candidates = originalImageCandidates(asset.imageUrl);
+  const results = await Promise.all(candidates.map((candidate) => probeOriginal(candidate)));
+  let webpFallback = null;
+  for (const result of results) {
+    if (!result) continue;
+    if (result.extension === ".webp") {
+      webpFallback ??= result;
+      continue;
+    }
+    return result;
+  }
+  return webpFallback;
+}
+
 async function pumpQueue() {
   if (running) return;
   running = true;
@@ -99,7 +146,10 @@ async function pumpQueue() {
     const result = await runItem(item, job);
     if (result === "complete") job.success += 1;
     else if (result === "failed") job.failed += 1;
-    else job.skipped += 1;
+    else {
+      job.skipped += 1;
+      if (result === "unsupported") job.originalUnavailable += 1;
+    }
     job.pending = Math.max(0, job.pending - 1);
     report(job);
     if (!job.cancelled && queue.length > 0) await new Promise((resolve) => setTimeout(resolve, 450));
@@ -120,9 +170,9 @@ function enqueue(message, tabId) {
       skipped += 1;
       continue;
     }
-    const filename = buildDownloadFilename(asset);
-    if (uniqueAssets.has(filename)) skipped += 1;
-    else uniqueAssets.set(filename, asset);
+    const assetKey = `${asset.boardSlug}/${asset.pinId}`;
+    if (uniqueAssets.has(assetKey)) skipped += 1;
+    else uniqueAssets.set(assetKey, asset);
   }
   const job = {
     jobId,
@@ -130,12 +180,13 @@ function enqueue(message, tabId) {
     total: uniqueAssets.size + skipped,
     success: 0,
     skipped,
+    originalUnavailable: 0,
     failed: 0,
     pending: uniqueAssets.size,
     cancelled: false
   };
   jobs.set(jobId, job);
-  for (const [filename, asset] of uniqueAssets) queue.push({ jobId, filename, asset });
+  for (const asset of uniqueAssets.values()) queue.push({ jobId, asset });
   report(job);
   void pumpQueue();
   return publicJob(job);

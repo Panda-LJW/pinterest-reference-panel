@@ -2,6 +2,7 @@
 
 | 日期 | 摘要 | 日志位置 | HASH |
 | --- | --- | --- | --- |
+| 2026-08-24 | 采集开关与 originals 原图优先 | `LOG.md#2026-08-24--采集开关与-originals-原图优先` | `fda85d313e81` |
 | 2026-08-24 | Pinterest Inbox MVP 候选版 | `LOG.md#2026-08-24--pinterest-inbox-mvp-候选版` | `3c1ea659ad81` |
 | 2026-08-22 | 建立 Private GitHub 主仓库 | `LOG.md#2026-08-22--建立-private-github-主仓库` | `8a102c9ff1b9` |
 | 2026-08-22 | 顶部导航与内容滚动分层 | `LOG.md#2026-08-22--顶部导航与内容滚动分层` | `c3595110e21f` |

@@ -22,7 +22,32 @@ test("derives stable board, pin, and safe Inbox filenames", async () => {
     pinId: "123456",
     title: "red/dress: study",
     imageUrl: "https://i.pinimg.com/originals/example.webp"
-  }), "PinterestInbox/character-ideas/123456__red-dress- study.webp");
+  }, ".webp"), "PinterestInbox/character-ideas/123456__red-dress- study.webp");
+  assert.throws(() => shared.buildDownloadFilename({ boardSlug: "board", pinId: "1", title: "bad" }), /verified|\u5df2\u9a8c\u8bc1/);
+});
+
+test("builds originals-only candidates and preserves the verified native format", async () => {
+  const shared = await loadShared();
+  assert.deepEqual(Array.from(shared.originalImageCandidates("https://i.pinimg.com/736x/aa/bb/hash.webp")), [
+    "https://i.pinimg.com/originals/aa/bb/hash.jpg",
+    "https://i.pinimg.com/originals/aa/bb/hash.jpeg",
+    "https://i.pinimg.com/originals/aa/bb/hash.png",
+    "https://i.pinimg.com/originals/aa/bb/hash.webp"
+  ]);
+  assert.deepEqual(Array.from(shared.originalImageCandidates("https://i.pinimg.com/474x/aa/bb/hash.png")), [
+    "https://i.pinimg.com/originals/aa/bb/hash.png",
+    "https://i.pinimg.com/originals/aa/bb/hash.jpg",
+    "https://i.pinimg.com/originals/aa/bb/hash.jpeg",
+    "https://i.pinimg.com/originals/aa/bb/hash.webp"
+  ]);
+  assert.equal(
+    shared.originalImageCandidates("https://i.pinimg.com/75x75_RS/aa/bb/avatar.webp")[0],
+    "https://i.pinimg.com/originals/aa/bb/avatar.jpg"
+  );
+  assert.equal(shared.originalExtensionForContentType("image/jpeg; charset=binary"), ".jpg");
+  assert.equal(shared.originalExtensionForContentType("image/png"), ".png");
+  assert.equal(shared.originalExtensionForContentType("image/webp"), ".webp");
+  assert.equal(shared.originalExtensionForContentType("image/gif"), null);
 });
 
 test("accepts only static HTTPS pinimg assets and selects the largest srcset", async () => {
@@ -37,6 +62,13 @@ test("accepts only static HTTPS pinimg assets and selects the largest srcset", a
 test("manifest keeps the browser permission surface narrow", async () => {
   const manifest = JSON.parse(await readFile(new URL("manifest.json", extensionRoot), "utf8"));
   assert.deepEqual(manifest.permissions, ["downloads"]);
-  assert.deepEqual(manifest.host_permissions, ["https://*.pinterest.com/*"]);
+  assert.deepEqual(manifest.host_permissions, ["https://*.pinterest.com/*", "https://*.pinimg.com/*"]);
   assert.deepEqual(manifest.content_scripts[0].matches, ["https://*.pinterest.com/*"]);
+});
+
+test("content panel exposes a functional pause control", async () => {
+  const content = await readFile(new URL("content.js", extensionRoot), "utf8");
+  assert.match(content, /id="toggleEnabled"/);
+  assert.match(content, /if \(!enabled\) return;/);
+  assert.match(content, /采集已暂停/);
 });

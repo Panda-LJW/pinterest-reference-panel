@@ -49,6 +49,33 @@
     }
   }
 
+  function originalExtensionForContentType(value) {
+    const contentType = String(value ?? "").split(";", 1)[0].trim().toLowerCase();
+    if (contentType === "image/jpeg" || contentType === "image/jpg") return ".jpg";
+    if (contentType === "image/png") return ".png";
+    if (contentType === "image/webp") return ".webp";
+    return null;
+  }
+
+  function originalImageCandidates(value) {
+    if (!isPinterestImageUrl(value)) return [];
+    const url = new URL(value);
+    const sourceExtension = extensionForUrl(value);
+    const stem = url.pathname.replace(/\.(avif|gif|jpe?g|png|webp)$/i, "");
+    const pathMatch = stem.match(/^\/(?:\d+x(?:\d+)?(?:_[a-z]+)?|originals)\/(.+)$/i);
+    if (!pathMatch) return [];
+    const originalStem = `/originals/${pathMatch[1]}`;
+    const preferredExtensions = sourceExtension === ".png"
+      ? [".png", ".jpg", ".jpeg", ".webp"]
+      : [".jpg", ".jpeg", ".png", ".webp"];
+    const candidates = preferredExtensions.map((extension) => {
+      const candidate = new URL(url.href);
+      candidate.pathname = `${originalStem}${extension}`;
+      return candidate.href;
+    });
+    return [...new Set(candidates)];
+  }
+
   function isPinterestImageUrl(value) {
     try {
       const url = new URL(value);
@@ -70,11 +97,14 @@
     return candidates[0]?.url ?? null;
   }
 
-  function buildDownloadFilename(asset) {
+  function buildDownloadFilename(asset, originalExtension) {
     const board = safeSegment(asset.boardSlug, "unsorted", 80).toLowerCase().replace(/\s+/g, "-");
     const pinId = safeSegment(asset.pinId, "pin", 64);
     const title = safeSegment(asset.title, "pinterest-image", 96);
-    const extension = extensionForUrl(asset.imageUrl);
+    if (![".jpg", ".png", ".webp"].includes(originalExtension)) {
+      throw new TypeError("下载文件名必须使用已验证的原图格式");
+    }
+    const extension = originalExtension;
     return `PinterestInbox/${board}/${pinId}__${title}${extension}`;
   }
 
@@ -84,6 +114,8 @@
     buildDownloadFilename,
     extensionForUrl,
     isPinterestImageUrl,
+    originalExtensionForContentType,
+    originalImageCandidates,
     parsePinId,
     safeSegment
   });

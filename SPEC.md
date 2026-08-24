@@ -17,7 +17,7 @@ Pinterest 图版
 ## 设计原则
 
 1. 不接 Pinterest API，不读取或保存账号凭证、Cookie 与登录态。
-2. Chrome 扩展只匹配 `https://*.pinterest.com/*`，生产权限只包含 `downloads`。
+2. Chrome 扩展内容脚本只匹配 `https://*.pinterest.com/*`；Chrome API 权限只包含 `downloads`，网络 host 权限只包含 Pinterest 页面和 `pinimg.com` CDN。
 3. 只处理 `pinimg.com` 的 HTTPS 静态图片；视频、HLS 和无有效图片地址的 Pin 必须跳过并计数。
 4. Inbox 默认固定为 `~/Downloads/PinterestInbox`，可用 `PINTEREST_INBOX_DIR` 覆盖；Chrome Downloads API 只能设置 Downloads 下的相对路径。
 5. MCP 不接受任意 URL、源文件路径或目标路径。导入只能使用已索引 `assetId` 和进程内随机 `workspaceToken`。
@@ -29,8 +29,11 @@ Pinterest 图版
 - 单张模式默认开启：单击 Pin 后立即加入下载队列。
 - 多选模式：单击勾选多个 Pin，再一次性加入队列。
 - 整板模式：保存当前位置，自动向下滚动并收集当前图版，连续五轮到达页面底部且无新增 Pin 后停止，随后恢复原滚动位置并开始下载。
+- 面板提供“暂停/启用”；暂停后不再拦截 Pin 点击，清除勾选并取消当前扫描或未完成下载。
 - 自动滚动最多 1000 步；若页面持续无限增长，必须明确提示达到安全上限并只处理已发现项目。
 - 下载串行限速 450ms；失败自动重试一次；用户可以取消扫描或尚未完成的下载。
+- 每个素材必须先探测 Pinterest CDN `originals` 路径；优先服务器确认为原生 JPG/PNG 的原图，仅当 originals 仅有 WebP 时保留 WebP。
+- 不得将 WebP 转码为 JPG/PNG，不得只修改扩展名，不得回退为 `236x` / `474x` / `736x` 等缩略图；无 JPG/PNG/WebP originals 时跳过并单独计数。
 - 文件名固定为 `PinterestInbox/<board-slug>/<pin-id>__<safe-title>.<ext>`，使用 `overwrite` 更新同一确定性目标，不触碰 Inbox 外文件。
 
 ## Inbox 与缩略图
@@ -75,7 +78,7 @@ Pinterest 图版
 
 ### 自动验证
 
-- 路径清理、Pin ID / 图版解析、权限清单和下载队列。
+- 路径清理、Pin ID / 图版解析、权限清单、originals 格式选择、WebP 原格式保留和下载队列。
 - 初次扫描、嵌套目录、临时文件忽略、索引版本与周期校准入口。
 - `sips` 缩略图、失败占位、私有 `_meta`。
 - 工作区边界、源/目标符号链接逃逸、重复导入和禁止覆盖。
