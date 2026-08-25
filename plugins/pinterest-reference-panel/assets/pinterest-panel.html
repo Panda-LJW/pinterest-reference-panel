@@ -260,9 +260,10 @@
     <script>
       (() => {
         const state = {
-          data: { mode: "inbox", version: 0, total: 0, assets: [], boards: [], nextCursor: null, watcherStatus: "starting", workspace: { available: false, token: null, reason: "尚未连接工作区" } },
+          data: { mode: "inbox", version: 0, total: 0, assets: [], boards: [], nextCursor: null, watcherStatus: "starting", transfer: { moved: 0, deduplicated: 0, renamed: 0, failed: 0, pending: 0 }, workspace: { available: false, token: null, reason: "尚未连接工作区" } },
           thumbnails: {},
-          inboxPath: "~/Downloads/PinterestInbox",
+          inboxPath: "~/Pictures/PinterestInbox",
+          stagingPath: "~/Downloads/PinterestInbox",
           workspaceToken: null,
           tab: "pins",
           boardId: null,
@@ -318,10 +319,15 @@
         function acceptResult(value, append = false) {
           const next = structured(value);
           if (!next || next.mode !== "inbox") return false;
-          if (next.unchanged) return true;
+          if (next.unchanged) {
+            state.data = { ...state.data, ...next, assets: state.data.assets, boards: state.data.boards };
+            render();
+            return true;
+          }
           const meta = findInboxMeta(value) ?? findInboxMeta(window.openai?.toolResponseMetadata);
           if (meta?.thumbnails) Object.assign(state.thumbnails, meta.thumbnails);
           if (meta?.inboxPath) state.inboxPath = meta.inboxPath;
+          if (meta?.stagingPath) state.stagingPath = meta.stagingPath;
           if (meta?.workspaceToken) state.workspaceToken = meta.workspaceToken;
           if (!Array.isArray(next.assets) || !Array.isArray(next.boards)) return false;
           const workspace = next.workspace ?? state.data.workspace;
@@ -356,7 +362,9 @@
           statusDot.classList.toggle("degraded", watcher !== "watching");
           const workspace = state.data.workspace;
           const workspaceCopy = workspace?.available ? ` · ${workspace.name}` : " · 仅浏览";
-          statusCopy.textContent = `${watcher === "watching" ? "Watching" : "Reconnecting"} · ${state.data.total} assets${workspaceCopy}`;
+          const transfer = state.data.transfer;
+          const transferCopy = transfer?.failed ? ` · ${transfer.failed} 个待重试` : transfer?.moved ? ` · 已收取 ${transfer.moved}` : "";
+          statusCopy.textContent = `${watcher === "watching" ? "Watching" : "Reconnecting"} · ${state.data.total} assets${transferCopy}${workspaceCopy}`;
         }
 
         function actionLabel(assetId) {
@@ -449,7 +457,7 @@
           wrapper.className = "empty";
           const card = document.createElement("div");
           card.className = "empty-card";
-          card.innerHTML = `<div class="empty-mark">P</div><h2>Inbox 还是空的</h2><p>在 Chrome 中打开 Pinterest 图版，使用配套扩展下载图片。插件会自动发现新素材。</p><span class="path"></span>`;
+          card.innerHTML = `<div class="empty-mark">P</div><h2>Inbox 还是空的</h2><p>在 Chrome 中打开 Pinterest 图版，使用配套扩展下载图片。插件会从下载暂存区自动收取新素材。</p><span class="path"></span>`;
           card.querySelector(".path").textContent = state.inboxPath;
           wrapper.append(card);
           root.replaceChildren(wrapper);
@@ -531,7 +539,7 @@
         document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => { state.tab = tab.dataset.tab; render(); }));
         clearFilter.addEventListener("click", () => { state.boardId = null; render(); });
         refreshButton.addEventListener("click", () => void refresh(true));
-        document.getElementById("about").addEventListener("click", () => showToast("只显示本地 PinterestInbox。监听仅在插件进程运行时开启。"));
+        document.getElementById("about").addEventListener("click", () => showToast(`长期素材库：${state.inboxPath}。临时下载区：${state.stagingPath}。`));
         loadMoreButton.addEventListener("click", async () => {
           if (!state.data.nextCursor) return;
           loadMoreButton.disabled = true;
@@ -543,9 +551,10 @@
         if (initialMeta?.thumbnails) Object.assign(state.thumbnails, initialMeta.thumbnails);
         if (initialMeta?.workspaceToken) state.workspaceToken = initialMeta.workspaceToken;
         if (initialMeta?.inboxPath) state.inboxPath = initialMeta.inboxPath;
+        if (initialMeta?.stagingPath) state.stagingPath = initialMeta.stagingPath;
         if (window.openai?.toolOutput) acceptResult(window.openai.toolOutput);
         render();
-        request("ui/initialize", { appInfo: { name: "Pinterest Inbox", version: "0.2.0" }, appCapabilities: {} }).catch(() => {});
+        request("ui/initialize", { appInfo: { name: "Pinterest Inbox", version: "0.4.0" }, appCapabilities: {} }).catch(() => {});
         setInterval(() => void poll(), 2000);
       })();
     </script>

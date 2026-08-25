@@ -405,11 +405,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants2);
+          this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -426,10 +426,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants2);
+        this.rhs = optimizeExpr(this.rhs, names, constants3);
         return this;
       }
       get names() {
@@ -490,8 +490,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants2) {
-        this.code = optimizeExpr(this.code, names, constants2);
+      optimizeNames(names, constants3) {
+        this.code = optimizeExpr(this.code, names, constants3);
         return this;
       }
       get names() {
@@ -520,12 +520,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants2))
+          if (n.optimizeNames(names, constants3))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -578,12 +578,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
-        if (!(super.optimizeNames(names, constants2) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants3);
+        if (!(super.optimizeNames(names, constants3) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants2);
+        this.condition = optimizeExpr(this.condition, names, constants3);
         return this;
       }
       get names() {
@@ -606,10 +606,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants2);
+        this.iteration = optimizeExpr(this.iteration, names, constants3);
         return this;
       }
       get names() {
@@ -645,10 +645,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants2) {
-        if (!super.optimizeNames(names, constants2))
+      optimizeNames(names, constants3) {
+        if (!super.optimizeNames(names, constants3))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants2);
+        this.iterable = optimizeExpr(this.iterable, names, constants3);
         return this;
       }
       get names() {
@@ -690,11 +690,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants2) {
+      optimizeNames(names, constants3) {
         var _a, _b;
-        super.optimizeNames(names, constants2);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants2);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants2);
+        super.optimizeNames(names, constants3);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants3);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants3);
         return this;
       }
       get names() {
@@ -995,7 +995,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants2) {
+    function optimizeExpr(expr, names, constants3) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1010,14 +1010,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants2[n.str];
+        const c = constants3[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants2[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants3[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -6913,7 +6913,7 @@ var require_dist = __commonJS({
 // src/server.ts
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname as dirname2, join as join3 } from "node:path";
+import { dirname as dirname3, join as join3 } from "node:path";
 
 // ../../node_modules/zod/v3/external.js
 var external_exports = {};
@@ -21155,10 +21155,11 @@ var StdioServerTransport = class {
 // src/inbox.ts
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { existsSync, watch } from "node:fs";
-import { mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { createReadStream, existsSync, watch } from "node:fs";
+import { constants } from "node:fs";
+import { copyFile, link, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 var execFileAsync = promisify(execFile);
 var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"]);
@@ -21221,6 +21222,23 @@ async function walkImages(root, directory = root) {
   }
   return paths;
 }
+async function hashFile(filePath) {
+  return new Promise((resolveHash, rejectHash) => {
+    const digest = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => digest.update(chunk));
+    stream.once("error", rejectHash);
+    stream.once("end", () => resolveHash(digest.digest("hex")));
+  });
+}
+async function isStableFile(filePath) {
+  const initial = await stat(filePath);
+  if (!initial.isFile()) return false;
+  if (Date.now() - initial.mtimeMs > 1e3) return true;
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+  const settled = await stat(filePath);
+  return settled.isFile() && initial.size === settled.size && initial.mtimeMs === settled.mtimeMs;
+}
 async function mapWithConcurrency(values, concurrency, mapper) {
   const results = new Array(values.length);
   let nextIndex = 0;
@@ -21236,18 +21254,32 @@ async function mapWithConcurrency(values, concurrency, mapper) {
 }
 var InboxService = class {
   inboxRoot;
+  stagingRoot;
   cacheRoot;
   reconcileIntervalMs;
   assets = /* @__PURE__ */ new Map();
   version = 0;
-  watcher = null;
+  watchers = [];
   reconcileTimer = null;
   debounceTimer = null;
   scanPromise = null;
+  reconcilePromise = null;
+  reconcileQueued = false;
   watcherStatus = "stopped";
+  transfer = {
+    moved: 0,
+    deduplicated: 0,
+    renamed: 0,
+    failed: 0,
+    pending: 0,
+    lastRunAt: null,
+    lastError: null
+  };
   refreshedAt = (/* @__PURE__ */ new Date(0)).toISOString();
   constructor(options = {}) {
-    this.inboxRoot = resolve(options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR ?? join(homedir(), "Downloads", "PinterestInbox"));
+    const configuredInbox = options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR;
+    this.inboxRoot = resolve(configuredInbox ?? join(homedir(), "Pictures", "PinterestInbox"));
+    this.stagingRoot = resolve(options.stagingRoot ?? process.env.PINTEREST_INBOX_STAGING_DIR ?? (configuredInbox ? this.inboxRoot : join(homedir(), "Downloads", "PinterestInbox")));
     this.cacheRoot = resolve(options.cacheRoot ?? join(homedir(), "Library", "Caches", "pinterest-reference-panel", "thumbnails"));
     this.reconcileIntervalMs = options.reconcileIntervalMs ?? RECONCILE_INTERVAL_MS;
   }
@@ -21255,36 +21287,138 @@ var InboxService = class {
     if (this.watcherStatus !== "stopped") return;
     this.watcherStatus = "starting";
     await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
     await mkdir(this.cacheRoot, { recursive: true });
-    await this.scan();
-    this.startWatcher();
+    await this.reconcile();
+    this.startWatchers();
     this.reconcileTimer = setInterval(() => {
-      void this.scan().catch(() => {
+      void this.reconcile().catch(() => {
         this.watcherStatus = "degraded";
       });
     }, this.reconcileIntervalMs);
     this.reconcileTimer.unref();
   }
-  startWatcher() {
-    try {
-      this.watcher = watch(this.inboxRoot, { recursive: true }, () => this.scheduleScan());
-      this.watcher.on("error", () => {
-        this.watcherStatus = "degraded";
-      });
-      this.watcherStatus = "watching";
-    } catch {
-      this.watcherStatus = "degraded";
+  startWatchers() {
+    let degraded = false;
+    for (const root of /* @__PURE__ */ new Set([this.inboxRoot, this.stagingRoot])) {
+      try {
+        const watcher = watch(root, { recursive: true }, () => this.scheduleReconcile());
+        watcher.on("error", () => {
+          this.watcherStatus = "degraded";
+        });
+        this.watchers.push(watcher);
+      } catch {
+        degraded = true;
+      }
     }
+    this.watcherStatus = degraded || this.watchers.length === 0 ? "degraded" : "watching";
   }
-  scheduleScan() {
+  scheduleReconcile() {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null;
-      void this.scan().catch(() => {
+      void this.reconcile().catch(() => {
         this.watcherStatus = "degraded";
       });
     }, WATCH_DEBOUNCE_MS);
     this.debounceTimer.unref();
+  }
+  async reconcile() {
+    if (this.reconcilePromise) {
+      this.reconcileQueued = true;
+      return this.reconcilePromise;
+    }
+    this.reconcilePromise = (async () => {
+      do {
+        this.reconcileQueued = false;
+        await this.drainStaging();
+        await this.scan();
+      } while (this.reconcileQueued);
+    })().finally(() => {
+      this.reconcilePromise = null;
+    });
+    return this.reconcilePromise;
+  }
+  async drainStaging() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    const canonicalInbox = await realpath(this.inboxRoot);
+    const canonicalStaging = await realpath(this.stagingRoot);
+    if (canonicalInbox === canonicalStaging) {
+      this.transfer = { ...this.transfer, pending: 0, lastRunAt: (/* @__PURE__ */ new Date()).toISOString(), lastError: null };
+      return;
+    }
+    if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
+      throw new Error("Pinterest Inbox \u957F\u671F\u5E93\u4E0E\u4E34\u65F6\u76EE\u5F55\u4E0D\u80FD\u76F8\u4E92\u5D4C\u5957");
+    }
+    const sourceFiles = await walkImages(canonicalStaging);
+    const next = {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: 0,
+      pending: 0,
+      lastRunAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastError: null
+    };
+    const errors = [];
+    for (const sourcePath of sourceFiles) {
+      try {
+        if (!await isStableFile(sourcePath)) {
+          next.pending += 1;
+          continue;
+        }
+        const sourceRelativePath = normalizeRelativePath(relative(canonicalStaging, sourcePath));
+        if (sourceRelativePath.startsWith("../") || sourceRelativePath === "..") throw new Error("\u6682\u5B58\u6587\u4EF6\u8D8A\u8FC7\u76EE\u5F55\u8FB9\u754C");
+        const sourceDigest = await hashFile(sourcePath);
+        const extension = extname(sourceRelativePath);
+        const stem = basename(sourceRelativePath, extension);
+        const relativeDirectory = relative(canonicalStaging, dirname(sourcePath));
+        const destinationDirectory = resolve(canonicalInbox, relativeDirectory);
+        await mkdir(destinationDirectory, { recursive: true });
+        const canonicalDestinationDirectory = await realpath(destinationDirectory);
+        if (!isWithin(canonicalInbox, canonicalDestinationDirectory)) throw new Error("\u76EE\u6807\u56FE\u7247\u76EE\u5F55\u8D8A\u8FC7\u957F\u671F\u5E93\u8FB9\u754C");
+        let destinationPath = join(canonicalDestinationDirectory, basename(sourceRelativePath));
+        let renamedForConflict = false;
+        for (let suffixLength = 8; ; suffixLength += 4) {
+          try {
+            const destinationStat = await lstat(destinationPath);
+            if (destinationStat.isFile() && await hashFile(destinationPath) === sourceDigest) {
+              await rm(sourcePath);
+              next.deduplicated += 1;
+              destinationPath = "";
+              break;
+            }
+          } catch (error2) {
+            const code = error2 && typeof error2 === "object" && "code" in error2 ? String(error2.code) : "";
+            if (code !== "ENOENT") throw error2;
+            break;
+          }
+          renamedForConflict = true;
+          destinationPath = join(canonicalDestinationDirectory, `${stem}--${sourceDigest.slice(0, Math.min(suffixLength, sourceDigest.length))}${extension}`);
+        }
+        if (!destinationPath) continue;
+        const temporaryPath = join(canonicalDestinationDirectory, `.${basename(destinationPath)}.${process.pid}.${Date.now()}.tmp`);
+        try {
+          await copyFile(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
+          if (await hashFile(temporaryPath) !== sourceDigest) throw new Error("\u642C\u8FD0\u540E\u6587\u4EF6\u6821\u9A8C\u5931\u8D25");
+          await link(temporaryPath, destinationPath);
+          await rm(temporaryPath);
+          await rm(sourcePath);
+        } catch (error2) {
+          await rm(temporaryPath, { force: true });
+          throw error2;
+        }
+        next.moved += 1;
+        if (renamedForConflict) next.renamed += 1;
+      } catch (error2) {
+        next.failed += 1;
+        next.pending += 1;
+        errors.push(`${basename(sourcePath)}: ${error2 instanceof Error ? error2.message : String(error2)}`);
+      }
+    }
+    next.lastError = errors.length ? errors.slice(0, 3).join("; ") : null;
+    this.transfer = next;
   }
   async scan() {
     if (this.scanPromise) return this.scanPromise;
@@ -21344,6 +21478,7 @@ var InboxService = class {
       version: this.version,
       total: this.assets.size,
       watcherStatus: this.watcherStatus,
+      transfer: { ...this.transfer },
       refreshedAt: this.refreshedAt
     };
   }
@@ -21362,7 +21497,7 @@ var InboxService = class {
     })).sort((left, right) => left.title.localeCompare(right.title));
   }
   async getPage(options = {}) {
-    if (options.forceRescan) await this.scan();
+    if (options.forceRescan) await this.reconcile();
     const records = [...this.assets.values()];
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
@@ -21390,6 +21525,7 @@ var InboxService = class {
         assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
         boards: this.buildBoards(records),
         watcherStatus: this.watcherStatus,
+        transfer: { ...this.transfer },
         refreshedAt: this.refreshedAt
       },
       thumbnails,
@@ -21412,8 +21548,8 @@ var InboxService = class {
     return `data:image/jpeg;base64,${(await readFile(cachePath)).toString("base64")}`;
   }
   async close() {
-    this.watcher?.close();
-    this.watcher = null;
+    for (const watcher of this.watchers) watcher.close();
+    this.watchers = [];
     if (this.reconcileTimer) clearInterval(this.reconcileTimer);
     this.reconcileTimer = null;
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
@@ -21425,10 +21561,10 @@ var InboxService = class {
 // src/workspace.ts
 import { createHash as createHash2, randomBytes } from "node:crypto";
 import { execFile as execFile2 } from "node:child_process";
-import { constants, existsSync as existsSync2 } from "node:fs";
-import { access, copyFile, lstat, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
+import { constants as constants2, existsSync as existsSync2 } from "node:fs";
+import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { basename as basename2, dirname, extname as extname2, join as join2, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { basename as basename2, dirname as dirname2, extname as extname2, join as join2, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
 import { promisify as promisify2 } from "node:util";
 var execFileAsync2 = promisify2(execFile2);
 var REFERENCE_MAX_EDGE = 2048;
@@ -21466,7 +21602,7 @@ var WorkspaceRegistry = class {
     try {
       const canonicalPath = await realpath2(resolve2(candidate));
       if (!(await stat2(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
-      await access(canonicalPath, constants.R_OK | constants.W_OK);
+      await access(canonicalPath, constants2.R_OK | constants2.W_OK);
       const token = randomBytes(24).toString("base64url");
       this.roots.set(token, canonicalPath);
       return { available: true, name: basename2(canonicalPath), token, reason: null };
@@ -21496,8 +21632,8 @@ var WorkspaceRegistry = class {
       }
     } catch {
     }
-    if (!isWithin2(canonicalRoot, await realpath2(dirname(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
-    await copyFile(prepared.path, destinationPath, constants.COPYFILE_EXCL);
+    if (!isWithin2(canonicalRoot, await realpath2(dirname2(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
+    await copyFile2(prepared.path, destinationPath, constants2.COPYFILE_EXCL);
     return this.result(canonicalRoot, destinationPath, false, prepared);
   }
   async prepareReference(asset) {
@@ -21530,7 +21666,7 @@ var WorkspaceRegistry = class {
       const canonicalCacheRoot = await realpath2(this.derivativeCacheRoot);
       const cachePath = join2(canonicalCacheRoot, `${digest.slice(0, 32)}-${recipe}${targetExtension}`);
       if (existsSync2(cachePath)) {
-        const cachedStat = await lstat(cachePath);
+        const cachedStat = await lstat2(cachePath);
         if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("\u5F15\u7528\u7F13\u5B58\u4E0D\u662F\u5B89\u5168\u7684\u666E\u901A\u6587\u4EF6");
         if (cachedStat.size >= sourceStat.size) {
           return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
@@ -21570,12 +21706,12 @@ var WorkspaceRegistry = class {
 
 // src/server.ts
 var PANEL_URI = "ui://pinterest-reference-panel/panel.html";
-var moduleDirectory = dirname2(fileURLToPath(import.meta.url));
+var moduleDirectory = dirname3(fileURLToPath(import.meta.url));
 var panelHtml = readFileSync(join3(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
 var inbox = new InboxService();
 var workspaces = new WorkspaceRegistry();
 var server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.3.1" },
+  { name: "pinterest-reference-panel", version: "0.4.0" },
   {
     capabilities: { resources: {}, tools: {} },
     instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
@@ -21629,6 +21765,7 @@ async function panelResult(options) {
         thumbnails: pageResult.thumbnails,
         thumbnailErrors: pageResult.thumbnailErrors,
         inboxPath: inbox.inboxRoot,
+        stagingPath: inbox.stagingRoot,
         workspaceToken: workspace?.token ?? null
       }
     }

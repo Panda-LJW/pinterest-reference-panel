@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { existsSync, watch, type FSWatcher } from "node:fs";
-import { mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { createReadStream, existsSync, watch, type FSWatcher } from "node:fs";
+import { constants } from "node:fs";
+import { copyFile, link, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -12,6 +13,16 @@ const RECONCILE_INTERVAL_MS = 10_000;
 const WATCH_DEBOUNCE_MS = 250;
 
 export type WatcherStatus = "starting" | "watching" | "degraded" | "stopped";
+
+export type TransferSummary = {
+  moved: number;
+  deduplicated: number;
+  renamed: number;
+  failed: number;
+  pending: number;
+  lastRunAt: string | null;
+  lastError: string | null;
+};
 
 export type InboxAsset = {
   id: string;
@@ -45,6 +56,7 @@ export type InboxPage = {
   assets: PublicInboxAsset[];
   boards: InboxBoard[];
   watcherStatus: WatcherStatus;
+  transfer: TransferSummary;
   refreshedAt: string;
 };
 
@@ -56,6 +68,7 @@ export type InboxPageWithThumbnails = {
 
 type InboxServiceOptions = {
   inboxRoot?: string;
+  stagingRoot?: string;
   cacheRoot?: string;
   reconcileIntervalMs?: number;
 };
@@ -123,6 +136,25 @@ async function walkImages(root: string, directory = root): Promise<string[]> {
   return paths;
 }
 
+async function hashFile(filePath: string) {
+  return new Promise<string>((resolveHash, rejectHash) => {
+    const digest = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => digest.update(chunk));
+    stream.once("error", rejectHash);
+    stream.once("end", () => resolveHash(digest.digest("hex")));
+  });
+}
+
+async function isStableFile(filePath: string) {
+  const initial = await stat(filePath);
+  if (!initial.isFile()) return false;
+  if (Date.now() - initial.mtimeMs > 1_000) return true;
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+  const settled = await stat(filePath);
+  return settled.isFile() && initial.size === settled.size && initial.mtimeMs === settled.mtimeMs;
+}
+
 async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper: (value: T) => Promise<R>): Promise<R[]> {
   const results = new Array<R>(values.length);
   let nextIndex = 0;
@@ -139,19 +171,33 @@ async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper
 
 export class InboxService {
   readonly inboxRoot: string;
+  readonly stagingRoot: string;
   readonly cacheRoot: string;
   private readonly reconcileIntervalMs: number;
   private assets = new Map<string, InboxAsset>();
   private version = 0;
-  private watcher: FSWatcher | null = null;
+  private watchers: FSWatcher[] = [];
   private reconcileTimer: NodeJS.Timeout | null = null;
   private debounceTimer: NodeJS.Timeout | null = null;
   private scanPromise: Promise<void> | null = null;
+  private reconcilePromise: Promise<void> | null = null;
+  private reconcileQueued = false;
   private watcherStatus: WatcherStatus = "stopped";
+  private transfer: TransferSummary = {
+    moved: 0,
+    deduplicated: 0,
+    renamed: 0,
+    failed: 0,
+    pending: 0,
+    lastRunAt: null,
+    lastError: null
+  };
   private refreshedAt = new Date(0).toISOString();
 
   constructor(options: InboxServiceOptions = {}) {
-    this.inboxRoot = resolve(options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR ?? join(homedir(), "Downloads", "PinterestInbox"));
+    const configuredInbox = options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR;
+    this.inboxRoot = resolve(configuredInbox ?? join(homedir(), "Pictures", "PinterestInbox"));
+    this.stagingRoot = resolve(options.stagingRoot ?? process.env.PINTEREST_INBOX_STAGING_DIR ?? (configuredInbox ? this.inboxRoot : join(homedir(), "Downloads", "PinterestInbox")));
     this.cacheRoot = resolve(options.cacheRoot ?? join(homedir(), "Library", "Caches", "pinterest-reference-panel", "thumbnails"));
     this.reconcileIntervalMs = options.reconcileIntervalMs ?? RECONCILE_INTERVAL_MS;
   }
@@ -160,32 +206,138 @@ export class InboxService {
     if (this.watcherStatus !== "stopped") return;
     this.watcherStatus = "starting";
     await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
     await mkdir(this.cacheRoot, { recursive: true });
-    await this.scan();
-    this.startWatcher();
+    await this.reconcile();
+    this.startWatchers();
     this.reconcileTimer = setInterval(() => {
-      void this.scan().catch(() => { this.watcherStatus = "degraded"; });
+      void this.reconcile().catch(() => { this.watcherStatus = "degraded"; });
     }, this.reconcileIntervalMs);
     this.reconcileTimer.unref();
   }
 
-  private startWatcher() {
-    try {
-      this.watcher = watch(this.inboxRoot, { recursive: true }, () => this.scheduleScan());
-      this.watcher.on("error", () => { this.watcherStatus = "degraded"; });
-      this.watcherStatus = "watching";
-    } catch {
-      this.watcherStatus = "degraded";
+  private startWatchers() {
+    let degraded = false;
+    for (const root of new Set([this.inboxRoot, this.stagingRoot])) {
+      try {
+        const watcher = watch(root, { recursive: true }, () => this.scheduleReconcile());
+        watcher.on("error", () => { this.watcherStatus = "degraded"; });
+        this.watchers.push(watcher);
+      } catch {
+        degraded = true;
+      }
     }
+    this.watcherStatus = degraded || this.watchers.length === 0 ? "degraded" : "watching";
   }
 
-  private scheduleScan() {
+  private scheduleReconcile() {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null;
-      void this.scan().catch(() => { this.watcherStatus = "degraded"; });
+      void this.reconcile().catch(() => { this.watcherStatus = "degraded"; });
     }, WATCH_DEBOUNCE_MS);
     this.debounceTimer.unref();
+  }
+
+  async reconcile() {
+    if (this.reconcilePromise) {
+      this.reconcileQueued = true;
+      return this.reconcilePromise;
+    }
+    this.reconcilePromise = (async () => {
+      do {
+        this.reconcileQueued = false;
+        await this.drainStaging();
+        await this.scan();
+      } while (this.reconcileQueued);
+    })().finally(() => { this.reconcilePromise = null; });
+    return this.reconcilePromise;
+  }
+
+  private async drainStaging() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    const canonicalInbox = await realpath(this.inboxRoot);
+    const canonicalStaging = await realpath(this.stagingRoot);
+    if (canonicalInbox === canonicalStaging) {
+      this.transfer = { ...this.transfer, pending: 0, lastRunAt: new Date().toISOString(), lastError: null };
+      return;
+    }
+    if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
+      throw new Error("Pinterest Inbox 长期库与临时目录不能相互嵌套");
+    }
+
+    const sourceFiles = await walkImages(canonicalStaging);
+    const next: TransferSummary = {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: 0,
+      pending: 0,
+      lastRunAt: new Date().toISOString(),
+      lastError: null
+    };
+    const errors: string[] = [];
+
+    for (const sourcePath of sourceFiles) {
+      try {
+        if (!await isStableFile(sourcePath)) {
+          next.pending += 1;
+          continue;
+        }
+        const sourceRelativePath = normalizeRelativePath(relative(canonicalStaging, sourcePath));
+        if (sourceRelativePath.startsWith("../") || sourceRelativePath === "..") throw new Error("暂存文件越过目录边界");
+        const sourceDigest = await hashFile(sourcePath);
+        const extension = extname(sourceRelativePath);
+        const stem = basename(sourceRelativePath, extension);
+        const relativeDirectory = relative(canonicalStaging, dirname(sourcePath));
+        const destinationDirectory = resolve(canonicalInbox, relativeDirectory);
+        await mkdir(destinationDirectory, { recursive: true });
+        const canonicalDestinationDirectory = await realpath(destinationDirectory);
+        if (!isWithin(canonicalInbox, canonicalDestinationDirectory)) throw new Error("目标图片目录越过长期库边界");
+
+        let destinationPath = join(canonicalDestinationDirectory, basename(sourceRelativePath));
+        let renamedForConflict = false;
+        for (let suffixLength = 8; ; suffixLength += 4) {
+          try {
+            const destinationStat = await lstat(destinationPath);
+            if (destinationStat.isFile() && await hashFile(destinationPath) === sourceDigest) {
+              await rm(sourcePath);
+              next.deduplicated += 1;
+              destinationPath = "";
+              break;
+            }
+          } catch (error) {
+            const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+            if (code !== "ENOENT") throw error;
+            break;
+          }
+          renamedForConflict = true;
+          destinationPath = join(canonicalDestinationDirectory, `${stem}--${sourceDigest.slice(0, Math.min(suffixLength, sourceDigest.length))}${extension}`);
+        }
+        if (!destinationPath) continue;
+
+        const temporaryPath = join(canonicalDestinationDirectory, `.${basename(destinationPath)}.${process.pid}.${Date.now()}.tmp`);
+        try {
+          await copyFile(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
+          if (await hashFile(temporaryPath) !== sourceDigest) throw new Error("搬运后文件校验失败");
+          await link(temporaryPath, destinationPath);
+          await rm(temporaryPath);
+          await rm(sourcePath);
+        } catch (error) {
+          await rm(temporaryPath, { force: true });
+          throw error;
+        }
+        next.moved += 1;
+        if (renamedForConflict) next.renamed += 1;
+      } catch (error) {
+        next.failed += 1;
+        next.pending += 1;
+        errors.push(`${basename(sourcePath)}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    next.lastError = errors.length ? errors.slice(0, 3).join("; ") : null;
+    this.transfer = next;
   }
 
   async scan() {
@@ -248,6 +400,7 @@ export class InboxService {
       version: this.version,
       total: this.assets.size,
       watcherStatus: this.watcherStatus,
+      transfer: { ...this.transfer },
       refreshedAt: this.refreshedAt
     };
   }
@@ -268,7 +421,7 @@ export class InboxService {
   }
 
   async getPage(options: { cursor?: string; limit?: number; forceRescan?: boolean } = {}): Promise<InboxPageWithThumbnails> {
-    if (options.forceRescan) await this.scan();
+    if (options.forceRescan) await this.reconcile();
     const records = [...this.assets.values()];
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
@@ -296,6 +449,7 @@ export class InboxService {
         assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
         boards: this.buildBoards(records),
         watcherStatus: this.watcherStatus,
+        transfer: { ...this.transfer },
         refreshedAt: this.refreshedAt
       },
       thumbnails,
@@ -320,8 +474,8 @@ export class InboxService {
   }
 
   async close() {
-    this.watcher?.close();
-    this.watcher = null;
+    for (const watcher of this.watchers) watcher.close();
+    this.watchers = [];
     if (this.reconcileTimer) clearInterval(this.reconcileTimer);
     this.reconcileTimer = null;
     if (this.debounceTimer) clearTimeout(this.debounceTimer);

@@ -28,6 +28,8 @@ test("widget is self-contained and declares the MCP Apps bridge", async () => {
   assert.match(html, /window\.parent === window/);
   assert.match(html, /import_pinterest_reference/);
   assert.match(html, /list_pinterest_inbox/);
+  assert.match(html, /stagingPath/);
+  assert.match(html, /transfer\?\.failed/);
   assert.match(html, /Pins/);
   assert.match(html, /Boards/);
   assert.match(html, /class="panel-chrome"/);

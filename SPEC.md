@@ -7,8 +7,9 @@
 ```text
 Pinterest 图版
   → Chrome 扩展（单张 / 多选 / 整板自动滚动）
-  → ~/Downloads/PinterestInbox/<board>/
-  → MCP 启动扫描 + 运行期监听
+  → ~/Downloads/PinterestInbox/<board>/（临时区）
+  → MCP 启动收取 + 运行期双目录监听
+  → ~/Pictures/PinterestInbox/<board>/（长期库）
   → Codex Pins / Boards 瀑布流
   → <workspace>/references/pinterest/<board>/
   → 当前任务收到相对路径
@@ -19,7 +20,7 @@ Pinterest 图版
 1. 不接 Pinterest API，不读取或保存账号凭证、Cookie 与登录态。
 2. Chrome 扩展内容脚本只匹配 `https://*.pinterest.com/*`；Chrome API 权限只包含下载所需的 `downloads`、图片处理所需的 `offscreen` 和保存用户质量偏好的 `storage`，网络 host 权限只包含 Pinterest 页面和 `pinimg.com` CDN。
 3. 只处理 `pinimg.com` 的 HTTPS 静态图片；视频、HLS 和无有效图片地址的 Pin 必须跳过并计数。
-4. Inbox 默认固定为 `~/Downloads/PinterestInbox`，可用 `PINTEREST_INBOX_DIR` 覆盖；Chrome Downloads API 只能设置 Downloads 下的相对路径。
+4. Chrome 临时下载区默认为 `~/Downloads/PinterestInbox`，长期素材库默认为 `~/Pictures/PinterestInbox`；分别可用 `PINTEREST_INBOX_STAGING_DIR` 和 `PINTEREST_INBOX_DIR` 覆盖。Chrome Downloads API 只能设置 Downloads 下的相对路径。
 5. MCP 不接受任意 URL、源文件路径或目标路径。导入只能使用已索引 `assetId` 和进程内随机 `workspaceToken`。
 6. 导入目标固定为 `<workspace>/references/pinterest/<board>/`，不覆盖现有不同内容，不允许符号链接越过工作区边界。
 7. 不引入数据库、常驻系统服务、LaunchAgent、Native Messaging 或新的生产 npm 依赖。
@@ -44,9 +45,11 @@ Pinterest 图版
 
 ## Inbox 与缩略图
 
-- MCP 进程启动时完整扫描，随后使用 `fs.watch`；关闭时释放 watcher 与 timer。
-- 每 10 秒全量校准，并提供显式强制刷新，弥补文件系统事件遗漏。
+- MCP 进程启动时先收取临时区，再完整扫描长期库；随后用 `fs.watch` 同时监听两个目录，关闭时释放所有 watcher 与 timer。
+- 文件事件经 250ms 去抖后立即收取；每 10 秒全量校准，并提供显式强制刷新，弥补文件系统事件遗漏。收取过程中又收到新事件时必须追加一轮，不得丢失变更。
 - 忽略隐藏路径、`.crdownload`、`.tmp` 和非图片文件。
+- 收取前必须确认文件体积与修改时间已稳定；保留相对图版路径，以目标临时文件 + SHA-256 校验 + 无覆盖落盘完成搬运，成功后才移除临时源文件。
+- 同名同内容复用长期库副本；同名不同内容增加内容短哈希。任何校验、路径边界或落盘失败都必须保留临时源文件并暴露错误状态。
 - 索引只保存在内存，记录稳定资产 ID、Pin、图版、签名和更新时间。
 - macOS 使用 `/usr/bin/sips` 按需生成最长边 480px 的 JPEG 缩略图，缓存于 `~/Library/Caches/pinterest-reference-panel/thumbnails/`。
 - 工作区导入使用同一智能轻量规则：WebP 原样复用；其他格式生成最长边不超过 2048px、JPEG 80 或透明 PNG 的候选件，只有候选件严格更小时才采用。已经符合条件的 JPEG/PNG 直接复用，不重复压缩。
@@ -89,6 +92,7 @@ Pinterest 图版
 
 - 路径清理、Pin ID / 图版解析、权限清单、默认偏好迁移、三档质量、originals 格式选择、智能轻量 WebP 原样保留、候选体积比较、透明图 PNG 输出和下载队列。
 - 初次扫描、嵌套目录、临时文件忽略、索引版本与周期校准入口。
+- 启动收取、运行期新文件、同内容去重、同名冲突、SHA-256 校验、目标符号链接逃逸和失败保留源文件。
 - `sips` 缩略图、失败占位、私有 `_meta`。
 - 工作区边界、源/目标符号链接逃逸、WebP 字节保留、2048/JPEG80 衍生缓存、较大候选回退、透明 PNG、重复导入和禁止覆盖。
 - MCP 工具结构、读写 annotations、UI bridge 与 sticky 顶栏。
@@ -98,7 +102,7 @@ Pinterest 图版
 1. 多选下载两张静态图片。
 2. 对一个真实图版执行整板自动滚动下载。
 3. 插件关闭期间下载图片，重新开启后由初扫补齐。
-4. 面板打开期间下载新图片，图片自动出现。
+4. 面板打开期间下载新图片，图片在数秒内从 Downloads 临时区进入 Pictures 长期库并自动出现。
 5. 单击 Pin 后工作区出现文件、任务收到相对路径，并由 Codex 实际读取图片。
 
 ## 非目标与未来路线

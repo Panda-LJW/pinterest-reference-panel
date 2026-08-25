@@ -48,6 +48,7 @@ test("stdio MCP lists Inbox content and safely imports one indexed image", async
   assert.equal(rendered.structuredContent.workspace.available, true);
   assert.equal(rendered.structuredContent.workspace.token, undefined);
   assert.equal(rendered._meta.pinterestInbox.inboxPath, inboxRoot);
+  assert.equal(rendered._meta.pinterestInbox.stagingPath, inboxRoot);
   assert.match(rendered._meta.pinterestInbox.workspaceToken, /^[a-zA-Z0-9_-]+$/);
 
   const imported = await client.callTool({

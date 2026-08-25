@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-08-25 — Downloads 暂存区与 Pictures 长期库
+
+- 任务目标：避免用户定期清理 Downloads 时误删 Pinterest 素材，将 Chrome 受限下载目录降为临时区，并把 `~/Pictures/PinterestInbox` 建立为唯一长期素材库。
+- 修改文件：MCP `src/inbox.ts`、`src/server.ts`、自包含运行时 bundle、面板 UI、Inbox/MCP 测试、插件版本、README、SPEC、package lock 与日志索引。
+- 关键决策：不改动稳定的 Chrome Downloads 链路；MCP 启动时收取积压文件，运行时同时监听临时区与长期库。搬运采用稳定文件判断、目标临时副本、SHA-256 验证、无覆盖落盘与成功后清理源文件；同名不同内容保留哈希后缀副本。
+- 验证结果：TypeScript 检查与 MCP bundle 构建通过；33/33 Node 自动测试通过，其中新增启动迁移、去重、同名冲突、运行期收取、目标目录和目标文件符号链接逃逸防护。真实迁移 13 张、5,464,597 bytes，Pictures 内逐文件 SHA-256 全部一致，Downloads 可索引图片归零，失败为 0；真实目录 watcher 将一张重复样本在 609ms 内识别并去重，长期库数量与哈希未变。插件清单验证通过，并已重装为 `0.4.0+codex.20260825004846`；安装缓存 MCP 实测读取 13 张、watching、0 失败。
+- 未解决事项：重装插件后需新建 Codex 任务验收面板自动刷新、真实新 Pin 下载收取和点击引用。
+- 回滚提示：可回退功能提交并重装旧插件；已收取素材保留在 Pictures，需要旧版时可通过 `PINTEREST_INBOX_DIR` 显式指向该长期库，不会自动搬回 Downloads。
+
 ## 2026-08-24 — 智能轻量默认与 WebP 原样保留
 
 - 任务目标：修复同分辨率 WebP 转成 JPEG80 后质量下降但体积反而增大的问题，并把默认保存策略改为真正以体积收益为条件的智能轻量。

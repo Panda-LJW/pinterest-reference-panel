@@ -2,22 +2,23 @@
 
 一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件以 Pins / Boards 瀑布流浏览，并把选中素材安全导入当前工作区。
 
-当前状态：**0.3.1 MVP 候选版**。真实登录态下的 Chrome originals 下载已确认；智能轻量、Codex 引用版和“整板下载 → Codex 导入 → 当前任务读取”仍需完成真实端到端验收。
+当前状态：**0.4.0 MVP 候选版**。真实登录态下的 Chrome originals 下载和本机存量迁移已确认；真实新 Pin 自动收取、Codex 引用版和“整板下载 → Codex 导入 → 当前任务读取”仍需完成用户端到端验收。
 
 ## 已实现能力
 
 - Chrome 单张、多选和整板自动滚动下载，面板内可暂停/启用采集；
 - 只下载 Pinterest CDN `originals` 原图；优先原生 JPG/PNG，仅原图只有 WebP 时保留 WebP，不转码、不改假后缀、不回退缩略图；
 - 以 `<标题>__pin-<Pin ID>.<格式>` 保存原图，同时保持可读性、去重与旧版文件兼容；
-- 固定写入 `~/Downloads/PinterestInbox/<board>/`；
+- Chrome 固定写入 `~/Downloads/PinterestInbox/<board>/` 临时区，Codex 插件校验后自动收取到 `~/Pictures/PinterestInbox/<board>/` 长期库；
 - 静态图片过滤、串行限速、取消、失败重试一次和结果统计；
 - MCP 启动完整扫描、运行期监听、10 秒周期校准与手动刷新；
+- 收取时保留图版结构，SHA-256 校验成功后才清理临时副本；同名同内容去重，同名不同内容增加短哈希且不覆盖；
 - `sips` 生成 480px JPEG 缩略图并独立缓存；
 - Pins / Boards 窄栏瀑布流与固定顶部栏；
 - 单击 Pin 安全复制到 `references/pinterest/<board>/`；
 - 导入后自动发送工作区相对路径，消息失败可重试而不重复复制。
 
-## 0.3.1 待人工验收
+## 0.4.0 待人工验收
 
 - 扩展面板提供“原图 / JPEG 高清 / 智能轻量”并记住用户选择；旧版本首次升级会迁移到默认“智能轻量”；
 - 智能轻量遇到 WebP originals 直接保留原字节；其他格式只有在 2048px/JPEG80 或透明 PNG 候选件确实更小时才采用；
@@ -48,12 +49,13 @@ codex plugin add pinterest-reference-panel@personal
 ## 本地目录
 
 ```text
-~/Downloads/PinterestInbox/                       # 原始下载素材
+~/Downloads/PinterestInbox/                       # Chrome 临时下载区
+~/Pictures/PinterestInbox/                        # 唯一长期素材库
 ~/Library/Caches/pinterest-reference-panel/       # 可安全清理的缩略图与引用衍生缓存
 <workspace>/references/pinterest/<board>/         # 明确点击后导入的任务素材
 ```
 
-可在启动 MCP 时通过 `PINTEREST_INBOX_DIR` 覆盖 Inbox。Chrome 扩展仍受 Downloads API 限制，只能下载到浏览器 Downloads 根目录下的相对路径。
+可在启动 MCP 时通过 `PINTEREST_INBOX_DIR` 覆盖长期素材库，通过 `PINTEREST_INBOX_STAGING_DIR` 覆盖临时下载区。Chrome 扩展仍受 Downloads API 限制，只能下载到浏览器 Downloads 根目录下的相对路径。
 
 ## 本地开发与测试
 
