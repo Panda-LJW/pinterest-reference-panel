@@ -506,7 +506,7 @@
               showToast(`图片已导入 ${relativePath}，单击卡片重试发送。`, true);
             }
           } catch (error) {
-            showToast(error instanceof Error ? error.message : "导入失败");
+            showToast(error instanceof Error ? error.message : "导入失败", true);
           } finally {
             state.pending.delete(asset.id);
             render();
@@ -529,8 +529,7 @@
           state.polling = true;
           try {
             const result = await callTool("list_pinterest_inbox", { knownVersion: state.data.version, limit: 30 });
-            const next = structured(result);
-            if (!next?.unchanged) acceptResult(result);
+            acceptResult(result);
           } catch {
             statusDot.classList.add("degraded");
           } finally { state.polling = false; }

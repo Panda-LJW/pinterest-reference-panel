@@ -1,5 +1,24 @@
 # 变更日志
 
+## 2026-08-30 — 本地右侧瀑布流与绝对路径复制
+
+- 任务目标：绕开当前 Codex 宿主未开放 `uploadFile` / `setWidgetState`、MCP Apps UI 只能出现在对话内以及 `ui/message` 会占用一轮对话的限制，把 Pinterest Inbox 主体验改为 Codex 右侧内嵌浏览器中的本地瀑布流；用户单击图片后只复制长期库原文件的真实绝对路径，再手动粘贴进当前对话。
+- 修改文件：新增 `src/local-panel-server.ts` 与 `assets/local-panel.html` / `local-panel.css` / `local-panel.js`；扩展 `src/inbox.ts`、`src/server.ts`、本地网页/MCP/Inbox/结构测试和运行时 bundle；恢复旧 `pinterest-panel.html` 的工作区导入回滚链路；同步更新插件清单、package 描述、`.gitignore`、README、SPEC 与日志索引。
+- 关键决策：本地 HTTP 与 MCP 同进程复用唯一 `InboxService`，只绑定 `127.0.0.1` 动态端口；API 使用 HttpOnly/Strict 会话 Cookie、随机 CSRF 头、精确 Host/Origin、无 CORS 和安全响应头。浏览器只能提交已索引 `assetId`，服务端重新执行真实路径边界检查后用无 shell 的 `/usr/bin/pbcopy` stdin 写入 canonical path；公开响应不返回 `sourcePath`，底层文件系统错误也统一脱敏。主路线不复制、不转码、不修改素材、不自动发消息；旧 MCP 工作区导入面板仅作回滚备用。
+- 稳定性收口：缩略图在前后端均限制为最多 4 路并对同素材请求去重，前端分别给常规 API 8 秒、缩略图 20 秒、手动完整刷新 120 秒超时，避免慢图误报离线；版本变化或手动刷新时清理失败/Blob 缓存，且旧 epoch 缩略图请求无论成功还是失败都不得污染新页面；快速切换 Pins、Boards 或图版时用请求 generation 与视图快照丢弃过期响应；`list_pinterest_inbox(forceRescan)` 只重扫长期库，不再隐式搬运 Downloads。MCP 启动窗口放宽到 120 秒，启停错误对工具结果使用固定脱敏文案。stdio EOF、SIGINT/SIGTERM 和重复关闭均走幂等清理，停止期间再次打开会等待旧 HTTP 服务完全释放，不会重叠两个网页实例。活动 HTTP 连接 500ms 后强制断开，已经启动的 `sips` / `pbcopy` 由各自超时有界收尾。
+- 验证结果：TypeScript、bundle 构建和完整仓库 **45/45** Node 自动测试通过，包含 Linux CI 可执行的回环 Host、会话、CSRF、Origin、超大请求体、任意路径、启动错误脱敏、分页、watcher、有活动请求时的并发停止/重开、关闭回调短暂失败后重试、stdio EOF 与 SIGTERM 端口释放测试。真实 `~/Pictures/PinterestInbox` 页面读取 38 张素材，400px 窄栏 Pins/Boards、sticky 顶栏和 0 条浏览器日志通过；隔离临时库对 Board A 注入 750ms 延迟后连续切换到 Board B，最终只显示 B。真实点击两次“个人网站视觉参考”均复制同一长期库 WebP 路径，前后大小 585,196 bytes、mtime、inode 和 SHA-256 `07e5b17984ce445a9a783d829d64698e0b184ac06fc9d0544444388897f603af` 完全不变，Codex 已直接读取该文件。插件清单通过官方校验，并重装为 `0.4.0+codex.20260829183930`；运行时 bundle、MCP 配置与本地网页资产同安装缓存逐字节一致，从该缓存直接启动的隔离 smoke test 确认网页返回 200、标题正确、启动与停止工具均正常。
+- 未解决事项：更新后的已安装插件必须在一个新 Codex 任务中加载；仍需用户亲自完成最后一次“右侧点击图片 → 回到输入框按 `⌘V` → 连同正常需求发送”的交互验收。验收前 README 继续标为候选版，不把能力写成正式完成。
+- 回滚提示：停止 `open_pinterest_inbox_web` 或回退本轮功能提交即可恢复旧 MCP 工作区导入面板；Chrome 下载、Downloads→Pictures 搬运、长期库图片和既有工作区文件均不会被删除。缩略图缓存可独立清理。
+
+## 2026-08-25 — Codex 点击即引用附件探针
+
+- 任务目标：验证用户单击 Inbox 图片后，能否不复制到工作区、不二次压缩、不发送后续提示词，直接通过 Codex 插件文件接口把图片加入当前任务的后续输入状态，并观察宿主是否显示原生输入框附件缩略图。
+- 修改文件：MCP `src/server.ts`、面板 `assets/pinterest-panel.html`、自包含运行时 bundle、MCP 与结构测试；正式 `SPEC.md` 和 `README.md` 暂不改写，等待真实宿主验收后再决定产品路线。
+- 关键决策：新增仅 UI 可见的只读 `prepare_pinterest_attachment` 探针工具，只允许读取当前 Inbox 索引中的安全图片，按原文件字节和真实 MIME 返回 UI 私有 Base64，既不调用工作区导入器也不调用图片转码器；面板把原字节构造成 `File`，依次调用 `window.openai.uploadFile` 与 `window.openai.setWidgetState({ imageIds })`。旧的 `ui/message` / `sendFollowUpMessage` 点击链路已从探针面板移除，因此探针不会代用户发送消息或占用一轮对话。
+- 验证结果：TypeScript 检查、MCP bundle 构建和完整仓库 33/33 Node 自动测试通过；MCP 测试确认探针返回字节与 Inbox 源文件完全一致、未泄露源路径，结构测试确认面板包含 `uploadFile` / `setWidgetState` / `imageIds` 且不再包含消息发送桥；插件清单在一次性 PyYAML 虚拟环境中验证通过。
+- 未解决事项：OpenAI 公开接口只承诺 `imageIds` 在后续轮次对模型可见，没有承诺一定生成输入框附件缩略图；程序构造的 `File` 是否被当前 Codex 桌面宿主接受也必须在重装后的新任务中实测。本轮是兼容性探针，不代表正式产品能力已验收。
+- 回滚提示：回退本轮探针代码并重装上一缓存版本即可恢复“复制工作区后发送相对路径”的旧链路；Pinterest Inbox 与既有工作区素材均不会被修改或删除。
+
 ## 2026-08-25 — Downloads 暂存区与 Pictures 长期库
 
 - 任务目标：避免用户定期清理 Downloads 时误删 Pinterest 素材，将 Chrome 受限下载目录降为临时区，并把 `~/Pictures/PinterestInbox` 建立为唯一长期素材库。

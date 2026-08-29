@@ -76,6 +76,27 @@ test("scan version changes only when indexed files change", async (context) => {
   assert.equal((await service.getPage()).page.version, initial + 1);
 });
 
+test("forceRescan refreshes the long-term index without draining Downloads", async (context) => {
+  const root = await mkdtemp(join(tmpdir(), "pinterest-readonly-rescan-test-"));
+  const inboxRoot = join(root, "Pictures", "PinterestInbox");
+  const stagingRoot = join(root, "Downloads", "PinterestInbox");
+  const staged = join(stagingRoot, "pending__pin-77.jpg");
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(inboxRoot, { recursive: true });
+  await mkdir(stagingRoot, { recursive: true });
+  await writeFile(staged, "pending-download");
+  const service = new InboxService({ inboxRoot, stagingRoot, cacheRoot: join(root, "cache"), reconcileIntervalMs: 60_000 });
+  context.after(() => service.close());
+
+  const empty = await service.getPublicPage({ forceRescan: true });
+  assert.equal(empty.total, 0);
+  assert.equal(await readFile(staged, "utf8"), "pending-download");
+  await writeFile(join(inboxRoot, "indexed__pin-88.jpg"), "indexed-image");
+  const refreshed = await service.getPublicPage({ forceRescan: true });
+  assert.equal(refreshed.total, 1);
+  assert.equal(await readFile(staged, "utf8"), "pending-download");
+});
+
 test("startup moves stable downloads into the long-term library before indexing", async (context) => {
   const root = await mkdtemp(join(tmpdir(), "pinterest-transfer-test-"));
   const stagingRoot = join(root, "Downloads", "PinterestInbox");
@@ -183,7 +204,8 @@ test("an unsafe destination symlink leaves the staged source untouched", async (
   const page = (await service.getPage()).page;
   assert.equal(page.total, 0);
   assert.equal(page.transfer.failed, 1);
-  assert.match(page.transfer.lastError, /越过长期库边界/);
+  assert.match(page.transfer.lastError, /未能安全收取/);
+  assert.equal(page.transfer.lastError.includes(root), false);
 });
 
 test("a destination file symlink cannot impersonate an identical library asset", async (context) => {
@@ -230,6 +252,7 @@ test("rejects an indexed file replaced by a symlink outside the Inbox", async (c
   await unlink(source);
   await symlink(outside, source);
   assert.equal(await service.resolveAsset(assetId), null);
+  assert.equal(await service.getThumbnail(assetId), null);
 });
 
 test("macOS thumbnail generation returns a small JPEG data URL", { skip: process.platform !== "darwin" }, async (context) => {
@@ -242,8 +265,12 @@ test("macOS thumbnail generation returns a small JPEG data URL", { skip: process
   const service = new InboxService({ inboxRoot, cacheRoot: join(root, "cache"), reconcileIntervalMs: 60_000 });
   await service.start();
   context.after(() => service.close());
+  const publicPage = await service.getPublicPage();
+  const assetId = publicPage.assets[0].id;
+  const concurrent = await Promise.all(Array.from({ length: 8 }, () => service.getThumbnail(assetId)));
+  assert.ok(concurrent.every((thumbnail) => thumbnail?.data.equals(concurrent[0].data)));
   const result = await service.getPage();
-  const assetId = result.page.assets[0].id;
   assert.match(result.thumbnails[assetId], /^data:image\/jpeg;base64,/);
   assert.equal(result.thumbnailErrors[assetId], undefined);
+  assert.equal((await readdir(join(root, "cache"))).filter((name) => name.endsWith(".jpg")).length, 1);
 });

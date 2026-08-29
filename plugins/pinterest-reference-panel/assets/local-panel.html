@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="pinterest-panel-token" content="__PINTEREST_PANEL_TOKEN__">
+    <title>Pinterest Inbox</title>
+    <link rel="stylesheet" href="/local-panel.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="panel-chrome">
+        <div class="title-row">
+          <div class="brand-lockup">
+            <span class="brand-mark" aria-hidden="true">P</span>
+            <div class="brand-copy">
+              <h1>Pinterest Inbox</h1>
+              <p id="watcherSummary" class="watcher-summary">正在连接本地素材库…</p>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button id="refreshButton" class="icon-button" type="button" aria-label="立即刷新" title="立即刷新">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.35 5.65M20 4v7h-7"/></svg>
+            </button>
+            <details class="help-menu">
+              <summary class="icon-button" aria-label="使用说明" title="使用说明">•••</summary>
+              <div class="help-popover">
+                <strong>点击即复制路径</strong>
+                <p>选择图片后回到对话，按 <kbd>⌘V</kbd> 粘贴真实路径。素材本身不会被复制、压缩或修改。</p>
+                <p class="help-muted">停止：调用 stop_pinterest_inbox_web；结束当前插件任务或关闭插件进程也会自动清理。</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="素材视图">
+          <button id="pinsTab" class="tab is-active" type="button" aria-selected="true">Pins</button>
+          <button id="boardsTab" class="tab" type="button" aria-selected="false">Boards</button>
+        </nav>
+      </header>
+
+      <section id="statusBanner" class="status-banner" hidden></section>
+      <section id="boardFilter" class="board-filter" hidden></section>
+
+      <main id="content" class="content" aria-live="polite" aria-busy="true">
+        <div class="skeleton-grid" aria-label="正在读取素材">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </main>
+
+      <div class="load-more-wrap">
+        <button id="loadMoreButton" class="load-more" type="button" hidden>继续加载</button>
+      </div>
+
+      <footer class="paste-hint">
+        <span class="paste-icon" aria-hidden="true">⌘V</span>
+        <span>点击图片复制路径，然后粘贴到对话</span>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <script type="module" src="/local-panel.js"></script>
+  </body>
+</html>

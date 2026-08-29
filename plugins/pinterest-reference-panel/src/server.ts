@@ -5,9 +5,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { InboxService } from "./inbox.js";
+import { startLocalPanelServer, type LocalPanelServerHandle } from "./local-panel-server.js";
 import { WorkspaceRegistry } from "./workspace.js";
 
 export { InboxService, parseInboxFilename } from "./inbox.js";
+export { startLocalPanelServer, writeTextToMacClipboard } from "./local-panel-server.js";
 export { WorkspaceRegistry } from "./workspace.js";
 
 const PANEL_URI = "ui://pinterest-reference-panel/panel.html";
@@ -16,12 +18,46 @@ const panelHtml = readFileSync(join(moduleDirectory, "../assets/pinterest-panel.
 
 export const inbox = new InboxService();
 export const workspaces = new WorkspaceRegistry();
+let localPanel: LocalPanelServerHandle | null = null;
+let localPanelStart: Promise<LocalPanelServerHandle> | null = null;
+let localPanelStop: Promise<boolean> | null = null;
+
+async function ensureLocalPanel() {
+  if (localPanelStop) await localPanelStop;
+  if (localPanel) return localPanel;
+  if (!localPanelStart) {
+    const configuredPort = process.env.PINTEREST_PANEL_PORT ? Number(process.env.PINTEREST_PANEL_PORT) : 0;
+    localPanelStart = startLocalPanelServer({ inbox, port: configuredPort }).then((handle) => {
+      localPanel = handle;
+      return handle;
+    }).finally(() => { localPanelStart = null; });
+  }
+  return localPanelStart;
+}
+
+async function stopLocalPanel() {
+  if (!localPanelStop) {
+    localPanelStop = (async () => {
+      const handle = localPanel ?? (localPanelStart ? await localPanelStart : null);
+      if (!handle) return false;
+      await handle.close();
+      if (localPanel === handle) localPanel = null;
+      return true;
+    })().finally(() => { localPanelStop = null; });
+  }
+  return localPanelStop;
+}
+
+function reportInternalError(context: string, error: unknown) {
+  const detail = error instanceof Error ? error.stack ?? error.message : String(error);
+  process.stderr.write(`[pinterest-reference-panel] ${context}: ${detail}\n`);
+}
 
 export const server = new McpServer(
   { name: "pinterest-reference-panel", version: "0.4.0" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
+    instructions: "Use open_pinterest_inbox_web as the primary experience: open its loopback URL in the Codex in-app browser, then let the user click an indexed image to copy its canonical absolute path and paste it into the conversation. Do not auto-send a message, re-encode, copy, or modify the selected source. The embedded workspace-import panel remains a legacy fallback only. Never accept arbitrary source URLs or paths."
   }
 );
 
@@ -123,10 +159,93 @@ server.registerTool(
 );
 
 server.registerTool(
+  "open_pinterest_inbox_web",
+  {
+    title: "打开 Pinterest Inbox 本地网页",
+    description: "启动只绑定本机回环地址的 Pinterest Inbox 瀑布流网页，并返回可在 Codex 内嵌浏览器中打开的 URL。",
+    inputSchema: {},
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "正在启动 Pinterest Inbox 本地网页…",
+      "openai/toolInvocation/invoked": "Pinterest Inbox 本地网页已就绪"
+    }
+  },
+  async () => {
+    try {
+      const handle = await ensureLocalPanel();
+      return {
+        structuredContent: { status: "running", url: handle.url, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
+        content: [{ type: "text" as const, text: `Pinterest Inbox 本地网页已启动：${handle.url}。请在 Codex 内嵌浏览器右侧打开此地址。` }]
+      };
+    } catch (error) {
+      reportInternalError("local panel start failed", error);
+      return {
+        isError: true,
+        content: [{ type: "text" as const, text: "无法启动 Pinterest Inbox 本地网页；请检查插件安装后重试。" }]
+      };
+    }
+  }
+);
+
+server.registerTool(
+  "get_pinterest_inbox_web_status",
+  {
+    title: "查看 Pinterest Inbox 网页状态",
+    description: "查看当前任务中的 Pinterest Inbox 本地网页是否正在运行。",
+    inputSchema: {},
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async () => {
+    const status = localPanelStop ? "stopping" : localPanel ? "running" : "stopped";
+    return {
+      structuredContent: {
+        status,
+        ...(localPanel ? { url: localPanel.url, host: localPanel.host, port: localPanel.port } : {}),
+        inbox: inbox.getSummary()
+      },
+      content: [{
+        type: "text" as const,
+        text: status === "stopping"
+          ? "Pinterest Inbox 本地网页正在停止。"
+          : localPanel
+            ? `Pinterest Inbox 本地网页正在运行：${localPanel.url}`
+            : "Pinterest Inbox 本地网页当前未启动。"
+      }]
+    };
+  }
+);
+
+server.registerTool(
+  "stop_pinterest_inbox_web",
+  {
+    title: "停止 Pinterest Inbox 本地网页",
+    description: "停止当前任务的本地网页服务；Inbox 监听和旧 MCP 面板保持可用。",
+    inputSchema: {},
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "正在停止 Pinterest Inbox 本地网页…",
+      "openai/toolInvocation/invoked": "Pinterest Inbox 本地网页已停止"
+    }
+  },
+  async () => {
+    try {
+      const stopped = await stopLocalPanel();
+      return {
+        structuredContent: { status: "stopped", wasRunning: stopped, inbox: inbox.getSummary() },
+        content: [{ type: "text" as const, text: stopped ? "Pinterest Inbox 本地网页已停止；Inbox 监听仍在运行。" : "Pinterest Inbox 本地网页原本就未启动。" }]
+      };
+    } catch (error) {
+      reportInternalError("local panel stop failed", error);
+      return { isError: true, content: [{ type: "text" as const, text: "停止 Pinterest Inbox 本地网页失败；请稍后重试。" }] };
+    }
+  }
+);
+
+server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "打开 Pinterest Inbox",
-    description: "打开本地 Pinterest Inbox 素材栏。在 Codex 中请将当前工作区绝对路径作为 workspaceRoot 传入，以便单击导入图片。",
+    title: "打开 Pinterest Inbox 旧面板",
+    description: "打开旧的内嵌 MCP 素材面板，作为本地网页不可用时的工作区导入回滚方案。",
     inputSchema: { workspaceRoot: z.string().optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
@@ -169,16 +288,59 @@ server.registerTool(
 
 export async function startServer() {
   await inbox.start();
-  await server.connect(new StdioServerTransport());
+  const transport = new StdioServerTransport();
+  const requestShutdown = () => {
+    void shutdown().catch((error: unknown) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exitCode = 1;
+      const forceExit = setTimeout(() => process.exit(1), 1_000);
+      forceExit.unref();
+    });
+  };
+  transport.onclose = requestShutdown;
+  process.stdin.once("end", requestShutdown);
+  process.stdin.once("close", requestShutdown);
+  try {
+    await server.connect(transport);
+  } catch (error) {
+    process.stdin.off("end", requestShutdown);
+    process.stdin.off("close", requestShutdown);
+    await inbox.close();
+    throw error;
+  }
 }
+
+let shutdownPromise: Promise<void> | null = null;
 
 async function shutdown() {
-  await inbox.close();
-  await server.close();
+  if (!shutdownPromise) {
+    shutdownPromise = (async () => {
+      try {
+        await stopLocalPanel();
+      } finally {
+        try {
+          await inbox.close();
+        } finally {
+          await server.close();
+        }
+      }
+    })();
+  }
+  return shutdownPromise;
 }
 
-process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
-process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
+function shutdownFromSignal() {
+  void shutdown().then(
+    () => process.exit(0),
+    (error: unknown) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exit(1);
+    }
+  );
+}
+
+process.once("SIGINT", shutdownFromSignal);
+process.once("SIGTERM", shutdownFromSignal);
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   startServer().catch((error: unknown) => {

@@ -51,6 +51,7 @@ export type InboxPage = {
   mode: "inbox";
   version: number;
   total: number;
+  libraryTotal: number;
   cursor: string | null;
   nextCursor: string | null;
   assets: PublicInboxAsset[];
@@ -71,6 +72,13 @@ type InboxServiceOptions = {
   stagingRoot?: string;
   cacheRoot?: string;
   reconcileIntervalMs?: number;
+};
+
+export type InboxListOptions = {
+  cursor?: string;
+  limit?: number;
+  boardId?: string;
+  forceRescan?: boolean;
 };
 
 function hash(value: string) {
@@ -181,6 +189,9 @@ export class InboxService {
   private debounceTimer: NodeJS.Timeout | null = null;
   private scanPromise: Promise<void> | null = null;
   private reconcilePromise: Promise<void> | null = null;
+  private thumbnailPromises = new Map<string, Promise<{ data: Buffer; contentType: "image/jpeg" } | null>>();
+  private thumbnailActive = 0;
+  private thumbnailWaiters: Array<() => void> = [];
   private reconcileQueued = false;
   private watcherStatus: WatcherStatus = "stopped";
   private transfer: TransferSummary = {
@@ -395,12 +406,26 @@ export class InboxService {
     }
   }
 
+  private publicTransferSummary(): TransferSummary {
+    return {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: this.transfer.failed,
+      pending: this.transfer.pending,
+      lastRunAt: this.transfer.lastRunAt,
+      lastError: this.transfer.failed > 0
+        ? "有文件未能安全收取；原文件仍保留在 Downloads 临时区，请重试。"
+        : null
+    };
+  }
+
   getSummary() {
     return {
       version: this.version,
       total: this.assets.size,
       watcherStatus: this.watcherStatus,
-      transfer: { ...this.transfer },
+      transfer: this.publicTransferSummary(),
       refreshedAt: this.refreshedAt
     };
   }
@@ -420,15 +445,37 @@ export class InboxService {
     })).sort((left, right) => left.title.localeCompare(right.title));
   }
 
-  async getPage(options: { cursor?: string; limit?: number; forceRescan?: boolean } = {}): Promise<InboxPageWithThumbnails> {
-    if (options.forceRescan) await this.reconcile();
+  async getPublicPage(options: InboxListOptions = {}): Promise<InboxPage> {
+    if (options.forceRescan) await this.scan();
     const records = [...this.assets.values()];
+    const filteredRecords = options.boardId
+      ? records.filter((record) => record.boardId === options.boardId)
+      : records;
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
-    const visible = records.slice(offset, offset + limit);
-    const thumbnailEntries = await mapWithConcurrency(visible, 4, async (asset) => {
+    const visible = filteredRecords.slice(offset, offset + limit);
+    return {
+      mode: "inbox",
+      version: this.version,
+      total: filteredRecords.length,
+      libraryTotal: records.length,
+      cursor: offset === 0 ? null : String(offset),
+      nextCursor: offset + visible.length < filteredRecords.length ? String(offset + visible.length) : null,
+      assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
+      boards: this.buildBoards(records),
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+
+  async getPage(options: InboxListOptions = {}): Promise<InboxPageWithThumbnails> {
+    const page = await this.getPublicPage(options);
+    const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
       try {
-        return [asset.id, await this.getThumbnailDataUrl(asset), null] as const;
+        const thumbnail = await this.getThumbnail(asset.id);
+        if (!thumbnail) throw new Error("图片已离开 Pinterest Inbox 或不再可读");
+        return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null] as const;
       } catch (error) {
         return [asset.id, null, error instanceof Error ? error.message : String(error)] as const;
       }
@@ -440,37 +487,49 @@ export class InboxService {
       if (error) thumbnailErrors[assetId] = error;
     }
     return {
-      page: {
-        mode: "inbox",
-        version: this.version,
-        total: records.length,
-        cursor: offset === 0 ? null : String(offset),
-        nextCursor: offset + visible.length < records.length ? String(offset + visible.length) : null,
-        assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
-        boards: this.buildBoards(records),
-        watcherStatus: this.watcherStatus,
-        transfer: { ...this.transfer },
-        refreshedAt: this.refreshedAt
-      },
+      page,
       thumbnails,
       thumbnailErrors
     };
   }
 
-  private async getThumbnailDataUrl(asset: InboxAsset) {
-    if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
-    const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
-    if (!existsSync(cachePath)) {
-      const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
-      try {
-        await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15_000 });
-        await rename(temporaryPath, cachePath);
-      } catch (error) {
-        await rm(temporaryPath, { force: true });
-        throw error;
-      }
+  private async withThumbnailSlot<T>(task: () => Promise<T>) {
+    if (this.thumbnailActive >= 4) await new Promise<void>((resolveWait) => this.thumbnailWaiters.push(resolveWait));
+    this.thumbnailActive += 1;
+    try {
+      return await task();
+    } finally {
+      this.thumbnailActive -= 1;
+      this.thumbnailWaiters.shift()?.();
     }
-    return `data:image/jpeg;base64,${(await readFile(cachePath)).toString("base64")}`;
+  }
+
+  async getThumbnail(assetId: string): Promise<{ data: Buffer; contentType: "image/jpeg" } | null> {
+    const asset = await this.resolveAsset(assetId);
+    if (!asset) return null;
+    const requestKey = `${asset.id}:${asset.signature}`;
+    const existing = this.thumbnailPromises.get(requestKey);
+    if (existing) return existing;
+    const pending = (async () => {
+      if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
+      const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
+      if (!existsSync(cachePath)) {
+        await this.withThumbnailSlot(async () => {
+          if (existsSync(cachePath)) return;
+          const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
+          try {
+            await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15_000 });
+            await rename(temporaryPath, cachePath);
+          } catch (error) {
+            await rm(temporaryPath, { force: true });
+            throw error;
+          }
+        });
+      }
+      return { data: await readFile(cachePath), contentType: "image/jpeg" as const };
+    })().finally(() => this.thumbnailPromises.delete(requestKey));
+    this.thumbnailPromises.set(requestKey, pending);
+    return pending;
   }
 
   async close() {

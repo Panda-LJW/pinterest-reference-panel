@@ -1,8 +1,8 @@
 # Pinterest Inbox for Codex
 
-一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件以 Pins / Boards 瀑布流浏览，并把选中素材安全导入当前工作区。
+一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件在本机回环地址提供 Pins / Boards 瀑布流；点击素材即可复制长期库原文件的真实绝对路径，再粘贴到当前对话供 Codex 引用。
 
-当前状态：**0.4.0 MVP 候选版**。真实登录态下的 Chrome originals 下载和本机存量迁移已确认；真实新 Pin 自动收取、Codex 引用版和“整板下载 → Codex 导入 → 当前任务读取”仍需完成用户端到端验收。
+当前状态：**0.4.0 MVP 候选版**。真实登录态下的 Chrome originals 下载和本机存量迁移已确认；本地网页已通过自动测试与开发机真实素材/剪贴板/Codex 读取探针。更新插件后在新任务中手动执行一次“点击 → `⌘V` 粘贴 → 正常发送需求”，仍是标记完成前的最后用户验收。
 
 ## 已实现能力
 
@@ -14,15 +14,17 @@
 - MCP 启动完整扫描、运行期监听、10 秒周期校准与手动刷新；
 - 收取时保留图版结构，SHA-256 校验成功后才清理临时副本；同名同内容去重，同名不同内容增加短哈希且不覆盖；
 - `sips` 生成 480px JPEG 缩略图并独立缓存；
-- Pins / Boards 窄栏瀑布流与固定顶部栏；
-- 单击 Pin 安全复制到 `references/pinterest/<board>/`；
-- 导入后自动发送工作区相对路径，消息失败可重试而不重复复制。
+- 旧 MCP Pins / Boards 窄栏瀑布流与固定顶部栏；
+- 旧 MCP 面板可把 Pin 安全复制到 `references/pinterest/<board>/` 并发送相对路径，作为回滚备用。
 
 ## 0.4.0 待人工验收
 
 - 扩展面板提供“原图 / JPEG 高清 / 智能轻量”并记住用户选择；旧版本首次升级会迁移到默认“智能轻量”；
 - 智能轻量遇到 WebP originals 直接保留原字节；其他格式只有在 2048px/JPEG80 或透明 PNG 候选件确实更小时才采用；
-- Codex 单击引用采用同一规则：WebP 直接引用，其他格式只使用真正更小的衍生件，缓存不反向修改 Inbox。
+- `open_pinterest_inbox_web` 在当前 MCP 进程内懒启动仅绑定 `127.0.0.1` 动态端口的本地网页，并可在 Codex 右侧内嵌浏览器打开；
+- 本地网页与 MCP 共用唯一 Inbox watcher；Pins / Boards 完整分页，监听状态和新素材自动刷新；
+- 单击 Pin 只提交已索引 `assetId`，服务端重新确认路径边界后用 `pbcopy` 写入 canonical absolute path；不复制、不压缩、不修改素材，也不自动发送消息；
+- 停止网页只释放 HTTP 服务，Inbox 监听和旧 MCP 回滚面板继续可用。
 
 ## 安装 Chrome 扩展
 
@@ -44,7 +46,7 @@ codex plugin marketplace add "$PWD"
 codex plugin add pinterest-reference-panel@personal
 ```
 
-插件更新后需要开启一个新的 Codex 任务，新的 MCP 工具和 UI 才会加载。打开面板时应把当前工作区绝对路径传给 `render_pinterest_reference_panel`；如果 Codex 宿主提供单一 MCP root，插件也会优先自动识别。
+插件更新后需要开启一个新的 Codex 任务，新的 MCP 工具才会加载。主路线是调用 `open_pinterest_inbox_web`，再把它返回的 `http://127.0.0.1:<动态端口>/` 打开到 Codex 内嵌浏览器右侧；点击图片后回到对话按 `⌘V`。旧 `render_pinterest_reference_panel` 继续保留为工作区导入回滚方案。
 
 ## 本地目录
 
@@ -52,7 +54,7 @@ codex plugin add pinterest-reference-panel@personal
 ~/Downloads/PinterestInbox/                       # Chrome 临时下载区
 ~/Pictures/PinterestInbox/                        # 唯一长期素材库
 ~/Library/Caches/pinterest-reference-panel/       # 可安全清理的缩略图与引用衍生缓存
-<workspace>/references/pinterest/<board>/         # 明确点击后导入的任务素材
+<workspace>/references/pinterest/<board>/         # 仅旧 MCP 回滚链路使用
 ```
 
 可在启动 MCP 时通过 `PINTEREST_INBOX_DIR` 覆盖长期素材库，通过 `PINTEREST_INBOX_STAGING_DIR` 覆盖临时下载区。Chrome 扩展仍受 Downloads API 限制，只能下载到浏览器 Downloads 根目录下的相对路径。
@@ -65,7 +67,7 @@ npm run check
 npm test
 ```
 
-测试覆盖 Inbox 扫描与监听、缩略图、工作区边界、MCP 往返、UI 结构、扩展路径清理和下载队列。涉及 Pinterest 登录态、真实 Downloads 写入和 Codex 宿主消息的最终链路需要按 [SPEC.md](SPEC.md) 的人工端到端步骤验收。
+测试覆盖 Inbox 扫描与监听、缩略图路径复核、本地 HTTP 回环/会话/Origin 边界、剪贴板解析、Boards 完整分页、MCP 并发停止/重开与 EOF/SIGTERM 生命周期、旧工作区边界、UI 过期请求防护、扩展路径清理和下载队列。真实 Downloads 写入与新任务中的手动粘贴链路仍需按 [SPEC.md](SPEC.md) 的人工端到端步骤验收。
 
 ## 仓库结构
 
@@ -80,8 +82,9 @@ npm test
 - 不接 Pinterest API，不读取或保存账号凭证；
 - 不搜索全站内容，不创建、保存、修改或删除 Pin；
 - 不下载视频；
-- MCP 不接受任意 URL 或任意写入路径；
-- 插件无法强制决定 Codex 的右侧停靠位置。
+- MCP 与本地网页不接受任意 URL 或任意写入路径；
+- 本地网页只绑定 `127.0.0.1`，默认使用动态端口，不提供 CORS；
+- MCP 工具本身不强制宿主布局；Codex 桌面端支持时由代理把本地 URL 打开到右侧内嵌浏览器。
 
 ## 声明
 

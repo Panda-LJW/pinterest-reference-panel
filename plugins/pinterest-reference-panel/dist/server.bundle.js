@@ -6912,8 +6912,8 @@ var require_dist = __commonJS({
 
 // src/server.ts
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname as dirname3, join as join3 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { dirname as dirname4, join as join4 } from "node:path";
 
 // ../../node_modules/zod/v3/external.js
 var external_exports = {};
@@ -21264,6 +21264,9 @@ var InboxService = class {
   debounceTimer = null;
   scanPromise = null;
   reconcilePromise = null;
+  thumbnailPromises = /* @__PURE__ */ new Map();
+  thumbnailActive = 0;
+  thumbnailWaiters = [];
   reconcileQueued = false;
   watcherStatus = "stopped";
   transfer = {
@@ -21473,12 +21476,23 @@ var InboxService = class {
       return null;
     }
   }
+  publicTransferSummary() {
+    return {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: this.transfer.failed,
+      pending: this.transfer.pending,
+      lastRunAt: this.transfer.lastRunAt,
+      lastError: this.transfer.failed > 0 ? "\u6709\u6587\u4EF6\u672A\u80FD\u5B89\u5168\u6536\u53D6\uFF1B\u539F\u6587\u4EF6\u4ECD\u4FDD\u7559\u5728 Downloads \u4E34\u65F6\u533A\uFF0C\u8BF7\u91CD\u8BD5\u3002" : null
+    };
+  }
   getSummary() {
     return {
       version: this.version,
       total: this.assets.size,
       watcherStatus: this.watcherStatus,
-      transfer: { ...this.transfer },
+      transfer: this.publicTransferSummary(),
       refreshedAt: this.refreshedAt
     };
   }
@@ -21496,15 +21510,34 @@ var InboxService = class {
       coverAssetIds: items.slice(0, 3).map((item) => item.id)
     })).sort((left, right) => left.title.localeCompare(right.title));
   }
-  async getPage(options = {}) {
-    if (options.forceRescan) await this.reconcile();
+  async getPublicPage(options = {}) {
+    if (options.forceRescan) await this.scan();
     const records = [...this.assets.values()];
+    const filteredRecords = options.boardId ? records.filter((record2) => record2.boardId === options.boardId) : records;
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
-    const visible = records.slice(offset, offset + limit);
-    const thumbnailEntries = await mapWithConcurrency(visible, 4, async (asset) => {
+    const visible = filteredRecords.slice(offset, offset + limit);
+    return {
+      mode: "inbox",
+      version: this.version,
+      total: filteredRecords.length,
+      libraryTotal: records.length,
+      cursor: offset === 0 ? null : String(offset),
+      nextCursor: offset + visible.length < filteredRecords.length ? String(offset + visible.length) : null,
+      assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
+      boards: this.buildBoards(records),
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+  async getPage(options = {}) {
+    const page = await this.getPublicPage(options);
+    const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
       try {
-        return [asset.id, await this.getThumbnailDataUrl(asset), null];
+        const thumbnail = await this.getThumbnail(asset.id);
+        if (!thumbnail) throw new Error("\u56FE\u7247\u5DF2\u79BB\u5F00 Pinterest Inbox \u6216\u4E0D\u518D\u53EF\u8BFB");
+        return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null];
       } catch (error2) {
         return [asset.id, null, error2 instanceof Error ? error2.message : String(error2)];
       }
@@ -21516,36 +21549,47 @@ var InboxService = class {
       if (error2) thumbnailErrors[assetId] = error2;
     }
     return {
-      page: {
-        mode: "inbox",
-        version: this.version,
-        total: records.length,
-        cursor: offset === 0 ? null : String(offset),
-        nextCursor: offset + visible.length < records.length ? String(offset + visible.length) : null,
-        assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
-        boards: this.buildBoards(records),
-        watcherStatus: this.watcherStatus,
-        transfer: { ...this.transfer },
-        refreshedAt: this.refreshedAt
-      },
+      page,
       thumbnails,
       thumbnailErrors
     };
   }
-  async getThumbnailDataUrl(asset) {
-    if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
-    const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
-    if (!existsSync(cachePath)) {
-      const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
-      try {
-        await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15e3 });
-        await rename(temporaryPath, cachePath);
-      } catch (error2) {
-        await rm(temporaryPath, { force: true });
-        throw error2;
-      }
+  async withThumbnailSlot(task) {
+    if (this.thumbnailActive >= 4) await new Promise((resolveWait) => this.thumbnailWaiters.push(resolveWait));
+    this.thumbnailActive += 1;
+    try {
+      return await task();
+    } finally {
+      this.thumbnailActive -= 1;
+      this.thumbnailWaiters.shift()?.();
     }
-    return `data:image/jpeg;base64,${(await readFile(cachePath)).toString("base64")}`;
+  }
+  async getThumbnail(assetId) {
+    const asset = await this.resolveAsset(assetId);
+    if (!asset) return null;
+    const requestKey = `${asset.id}:${asset.signature}`;
+    const existing = this.thumbnailPromises.get(requestKey);
+    if (existing) return existing;
+    const pending = (async () => {
+      if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
+      const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
+      if (!existsSync(cachePath)) {
+        await this.withThumbnailSlot(async () => {
+          if (existsSync(cachePath)) return;
+          const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
+          try {
+            await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15e3 });
+            await rename(temporaryPath, cachePath);
+          } catch (error2) {
+            await rm(temporaryPath, { force: true });
+            throw error2;
+          }
+        });
+      }
+      return { data: await readFile(cachePath), contentType: "image/jpeg" };
+    })().finally(() => this.thumbnailPromises.delete(requestKey));
+    this.thumbnailPromises.set(requestKey, pending);
+    return pending;
   }
   async close() {
     for (const watcher of this.watchers) watcher.close();
@@ -21558,13 +21602,295 @@ var InboxService = class {
   }
 };
 
+// src/local-panel-server.ts
+import { randomBytes } from "node:crypto";
+import { existsSync as existsSync2 } from "node:fs";
+import { readFile as readFile2 } from "node:fs/promises";
+import { createServer } from "node:http";
+import { dirname as dirname2, join as join2 } from "node:path";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+var LOOPBACK_HOST = "127.0.0.1";
+var MAX_JSON_BYTES = 2048;
+var CLOSE_GRACE_MS = 500;
+var ASSET_ID_PATTERN = /^[a-f0-9]{24}$/;
+var HttpError = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+function commonHeaders() {
+  return {
+    "Cache-Control": "no-store",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff"
+  };
+}
+function sendJson(response, status, value) {
+  response.writeHead(status, { ...commonHeaders(), "Content-Type": "application/json; charset=utf-8" });
+  response.end(JSON.stringify(value));
+}
+function requestCookie(request, name) {
+  const cookieHeader = request.headers.cookie ?? "";
+  for (const entry of cookieHeader.split(";")) {
+    const [key, ...parts] = entry.trim().split("=");
+    if (key === name) return parts.join("=");
+  }
+  return null;
+}
+function assertLoopbackRequest(request, expectedHost) {
+  const remoteAddress = request.socket.remoteAddress;
+  if (remoteAddress !== LOOPBACK_HOST && remoteAddress !== `::ffff:${LOOPBACK_HOST}`) {
+    throw new HttpError(403, "\u4EC5\u5141\u8BB8\u672C\u673A\u8BBF\u95EE Pinterest Inbox \u9762\u677F");
+  }
+  if (request.headers.host !== expectedHost) {
+    throw new HttpError(421, "\u8BF7\u6C42\u4E3B\u673A\u4E0E\u672C\u5730\u9762\u677F\u4E0D\u5339\u914D");
+  }
+}
+function assertApiSession(request, sessionId, csrfToken) {
+  if (requestCookie(request, "pinterest_panel_session") !== sessionId) {
+    throw new HttpError(401, "\u672C\u5730\u9762\u677F\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u5237\u65B0\u9875\u9762");
+  }
+  if (request.headers["x-pinterest-panel-token"] !== csrfToken) {
+    throw new HttpError(403, "\u672C\u5730\u9762\u677F\u4EE4\u724C\u65E0\u6548\uFF0C\u8BF7\u5237\u65B0\u9875\u9762");
+  }
+}
+function assertSameOriginMutation(request, origin) {
+  if (request.headers.origin !== origin) {
+    throw new HttpError(403, "\u62D2\u7EDD\u6765\u81EA\u5176\u4ED6\u9875\u9762\u7684\u5199\u64CD\u4F5C");
+  }
+  const fetchSite = request.headers["sec-fetch-site"];
+  if (fetchSite && fetchSite !== "same-origin") {
+    throw new HttpError(403, "\u62D2\u7EDD\u8DE8\u7AD9\u5199\u64CD\u4F5C");
+  }
+  const contentType = request.headers["content-type"] ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    throw new HttpError(415, "\u8BF7\u6C42\u5FC5\u987B\u4F7F\u7528 JSON");
+  }
+}
+async function readJson(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.byteLength;
+    if (size > MAX_JSON_BYTES) throw new HttpError(413, "\u8BF7\u6C42\u5185\u5BB9\u8FC7\u5927");
+    chunks.push(buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new HttpError(400, "\u8BF7\u6C42 JSON \u65E0\u6548");
+  }
+}
+function parseAssetId(value) {
+  if (typeof value !== "string" || !ASSET_ID_PATTERN.test(value)) {
+    throw new HttpError(400, "\u7D20\u6750 ID \u65E0\u6548");
+  }
+  return value;
+}
+function parsePort(value) {
+  if (value === void 0) return 0;
+  if (!Number.isInteger(value) || value < 0 || value > 65535) throw new Error("PINTEREST_PANEL_PORT \u5FC5\u987B\u662F 0 \u5230 65535 \u7684\u6574\u6570");
+  return value;
+}
+async function writeTextToMacClipboard(text) {
+  if (process.platform !== "darwin" || !existsSync2("/usr/bin/pbcopy")) {
+    throw new Error("\u5F53\u524D\u7CFB\u7EDF\u6CA1\u6709\u53EF\u7528\u7684 macOS \u526A\u8D34\u677F\u670D\u52A1");
+  }
+  if (!text || Buffer.byteLength(text, "utf8") > 16384) throw new Error("\u5F85\u590D\u5236\u8DEF\u5F84\u65E0\u6548\u6216\u8FC7\u957F");
+  await new Promise((resolveWrite, rejectWrite) => {
+    const child = spawn("/usr/bin/pbcopy", [], { stdio: ["pipe", "ignore", "pipe"] });
+    const errors = [];
+    let settled = false;
+    const finish = (error2) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error2) rejectWrite(error2);
+      else resolveWrite();
+    };
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish(new Error("\u5199\u5165\u526A\u8D34\u677F\u8D85\u65F6"));
+    }, 5e3);
+    child.stderr.on("data", (chunk) => errors.push(Buffer.from(chunk)));
+    child.once("error", (error2) => finish(error2));
+    child.once("close", (code) => {
+      if (code === 0) finish();
+      else finish(new Error(Buffer.concat(errors).toString("utf8").trim() || `pbcopy \u9000\u51FA\u7801 ${code}`));
+    });
+    child.stdin.once("error", (error2) => finish(error2));
+    child.stdin.end(text, "utf8");
+  });
+}
+async function startLocalPanelServer(options) {
+  const moduleDirectory2 = dirname2(fileURLToPath(import.meta.url));
+  const assetRoot = options.assetRoot ?? join2(moduleDirectory2, "../assets");
+  const [htmlTemplate, css, javascript] = await Promise.all([
+    readFile2(join2(assetRoot, "local-panel.html"), "utf8"),
+    readFile2(join2(assetRoot, "local-panel.css"), "utf8"),
+    readFile2(join2(assetRoot, "local-panel.js"), "utf8")
+  ]);
+  const clipboardWriter = options.clipboardWriter ?? writeTextToMacClipboard;
+  const sessionId = randomBytes(24).toString("base64url");
+  const csrfToken = randomBytes(24).toString("base64url");
+  let origin = "";
+  let expectedHost = "";
+  const httpServer = createServer((request, response) => {
+    void (async () => {
+      assertLoopbackRequest(request, expectedHost);
+      const method = request.method ?? "GET";
+      const requestUrl = new URL(request.url ?? "/", origin);
+      if (method === "GET" && requestUrl.pathname === "/") {
+        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken);
+        response.writeHead(200, {
+          ...commonHeaders(),
+          "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+          "Content-Type": "text/html; charset=utf-8",
+          "Set-Cookie": `pinterest_panel_session=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
+        });
+        response.end(html);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/local-panel.css") {
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": "text/css; charset=utf-8" });
+        response.end(css);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/local-panel.js") {
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": "text/javascript; charset=utf-8" });
+        response.end(javascript);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/favicon.ico") {
+        response.writeHead(204, commonHeaders());
+        response.end();
+        return;
+      }
+      if (!requestUrl.pathname.startsWith("/api/")) throw new HttpError(404, "\u9875\u9762\u4E0D\u5B58\u5728");
+      assertApiSession(request, sessionId, csrfToken);
+      if (method === "GET" && requestUrl.pathname === "/api/status") {
+        const knownVersionRaw = requestUrl.searchParams.get("knownVersion");
+        const knownVersion = knownVersionRaw && /^\d+$/.test(knownVersionRaw) ? Number.parseInt(knownVersionRaw, 10) : null;
+        const summary = options.inbox.getSummary();
+        sendJson(response, 200, { unchanged: knownVersion !== null && knownVersion === summary.version, ...summary });
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/api/inbox") {
+        const cursorRaw = requestUrl.searchParams.get("cursor");
+        const limitRaw = requestUrl.searchParams.get("limit");
+        const boardIdRaw = requestUrl.searchParams.get("boardId");
+        if (cursorRaw && !/^\d{1,9}$/.test(cursorRaw)) throw new HttpError(400, "\u5206\u9875\u6E38\u6807\u65E0\u6548");
+        if (limitRaw && !/^\d{1,2}$/.test(limitRaw)) throw new HttpError(400, "\u5206\u9875\u6570\u91CF\u65E0\u6548");
+        if (boardIdRaw && (boardIdRaw.length > 255 || /[\u0000-\u001f]/.test(boardIdRaw))) throw new HttpError(400, "\u56FE\u7248 ID \u65E0\u6548");
+        const page = await options.inbox.getPublicPage({
+          ...cursorRaw ? { cursor: cursorRaw } : {},
+          ...limitRaw ? { limit: Number.parseInt(limitRaw, 10) } : {},
+          ...boardIdRaw ? { boardId: boardIdRaw } : {}
+        });
+        sendJson(response, 200, { page });
+        return;
+      }
+      const thumbnailMatch = method === "GET" ? requestUrl.pathname.match(/^\/api\/thumbnails\/([a-f0-9]{24})$/) : null;
+      if (thumbnailMatch) {
+        const thumbnail = await options.inbox.getThumbnail(thumbnailMatch[1] ?? "");
+        if (!thumbnail) throw new HttpError(404, "\u7D20\u6750\u5DF2\u4E0D\u5728 Inbox \u4E2D");
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": thumbnail.contentType });
+        response.end(thumbnail.data);
+        return;
+      }
+      if (method === "POST") assertSameOriginMutation(request, origin);
+      if (method === "POST" && requestUrl.pathname === "/api/refresh") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 0) {
+          throw new HttpError(400, "\u5237\u65B0\u8BF7\u6C42\u4E0D\u63A5\u53D7\u989D\u5916\u53C2\u6570");
+        }
+        await options.inbox.reconcile();
+        sendJson(response, 200, { status: "refreshed", ...options.inbox.getSummary() });
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/clipboard") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u65E0\u6548");
+        const entries = Object.keys(body);
+        if (entries.length !== 1 || entries[0] !== "assetId") throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u53EA\u80FD\u63D0\u4EA4\u7D20\u6750 ID");
+        const assetId = parseAssetId(body.assetId);
+        const asset = await options.inbox.resolveAsset(assetId);
+        if (!asset) throw new HttpError(404, "\u7D20\u6750\u5DF2\u4E0D\u5728 Inbox \u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+        await clipboardWriter(asset.sourcePath);
+        sendJson(response, 200, {
+          status: "copied",
+          assetId,
+          title: asset.title,
+          fileName: asset.sourceRelativePath.split("/").at(-1) ?? asset.title
+        });
+        return;
+      }
+      throw new HttpError(404, "\u63A5\u53E3\u4E0D\u5B58\u5728");
+    })().catch((error2) => {
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
+      const status = error2 instanceof HttpError ? error2.status : 500;
+      const message = error2 instanceof HttpError ? error2.message : "\u672C\u5730\u9762\u677F\u6682\u65F6\u65E0\u6CD5\u5B8C\u6210\u8BF7\u6C42\uFF0C\u8BF7\u91CD\u8BD5";
+      sendJson(response, status, { error: message });
+    });
+  });
+  const requestedPort = parsePort(options.port);
+  await new Promise((resolveListen, rejectListen) => {
+    const onError = (error2) => rejectListen(error2);
+    httpServer.once("error", onError);
+    httpServer.listen(requestedPort, LOOPBACK_HOST, () => {
+      httpServer.off("error", onError);
+      resolveListen();
+    });
+  });
+  const address = httpServer.address();
+  if (!address || typeof address === "string") {
+    httpServer.close();
+    throw new Error("\u65E0\u6CD5\u786E\u5B9A Pinterest Inbox \u672C\u5730\u9762\u677F\u7AEF\u53E3");
+  }
+  origin = `http://${LOOPBACK_HOST}:${address.port}`;
+  expectedHost = `${LOOPBACK_HOST}:${address.port}`;
+  let closePromise = null;
+  return {
+    host: LOOPBACK_HOST,
+    port: address.port,
+    url: `${origin}/`,
+    close: () => {
+      if (!closePromise) {
+        closePromise = new Promise((resolveClose, rejectClose) => {
+          const forceClose = setTimeout(() => httpServer.closeAllConnections(), CLOSE_GRACE_MS);
+          forceClose.unref();
+          httpServer.close((error2) => {
+            clearTimeout(forceClose);
+            if (error2) rejectClose(error2);
+            else resolveClose();
+          });
+          httpServer.closeIdleConnections();
+        }).catch((error2) => {
+          closePromise = null;
+          throw error2;
+        });
+      }
+      return closePromise;
+    }
+  };
+}
+
 // src/workspace.ts
-import { createHash as createHash2, randomBytes } from "node:crypto";
+import { createHash as createHash2, randomBytes as randomBytes2 } from "node:crypto";
 import { execFile as execFile2 } from "node:child_process";
-import { constants as constants2, existsSync as existsSync2 } from "node:fs";
-import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile2, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
+import { constants as constants2, existsSync as existsSync3 } from "node:fs";
+import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
-import { basename as basename2, dirname as dirname2, extname as extname2, join as join2, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { basename as basename2, dirname as dirname3, extname as extname2, join as join3, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
 import { promisify as promisify2 } from "node:util";
 var execFileAsync2 = promisify2(execFile2);
 var REFERENCE_MAX_EDGE = 2048;
@@ -21578,7 +21904,7 @@ function safeSegment(value) {
   return cleaned || "reference";
 }
 async function fileHash(path) {
-  return createHash2("sha256").update(await readFile2(path)).digest("hex");
+  return createHash2("sha256").update(await readFile3(path)).digest("hex");
 }
 function parseSipsProperties(stdout) {
   const property = (name) => stdout.match(new RegExp(`^\\s*${name}:\\s*(.+)\\s*$`, "mi"))?.[1]?.trim() ?? null;
@@ -21593,7 +21919,7 @@ var WorkspaceRegistry = class {
   imageProcessorPath;
   platform;
   constructor(options = {}) {
-    this.derivativeCacheRoot = resolve2(options.derivativeCacheRoot ?? join2(homedir2(), "Library", "Caches", "pinterest-reference-panel", "references"));
+    this.derivativeCacheRoot = resolve2(options.derivativeCacheRoot ?? join3(homedir2(), "Library", "Caches", "pinterest-reference-panel", "references"));
     this.imageProcessorPath = options.imageProcessorPath ?? "/usr/bin/sips";
     this.platform = options.platform ?? process.platform;
   }
@@ -21603,7 +21929,7 @@ var WorkspaceRegistry = class {
       const canonicalPath = await realpath2(resolve2(candidate));
       if (!(await stat2(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
       await access(canonicalPath, constants2.R_OK | constants2.W_OK);
-      const token = randomBytes(24).toString("base64url");
+      const token = randomBytes2(24).toString("base64url");
       this.roots.set(token, canonicalPath);
       return { available: true, name: basename2(canonicalPath), token, reason: null };
     } catch (error2) {
@@ -21614,7 +21940,7 @@ var WorkspaceRegistry = class {
     const workspaceRoot = this.roots.get(token);
     if (!workspaceRoot) throw new Error("\u5DE5\u4F5C\u533A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F");
     const canonicalRoot = await realpath2(workspaceRoot);
-    const destinationDirectory = join2(canonicalRoot, "references", "pinterest", safeSegment(asset.boardId));
+    const destinationDirectory = join3(canonicalRoot, "references", "pinterest", safeSegment(asset.boardId));
     await mkdir2(destinationDirectory, { recursive: true });
     const canonicalDestinationDirectory = await realpath2(destinationDirectory);
     if (!isWithin2(canonicalRoot, canonicalDestinationDirectory)) throw new Error("\u5DE5\u4F5C\u533A\u5B50\u76EE\u5F55\u6307\u5411\u4E86\u6839\u76EE\u5F55\u4E4B\u5916");
@@ -21622,17 +21948,17 @@ var WorkspaceRegistry = class {
     const extension = prepared.extension;
     const stem = safeSegment(basename2(asset.sourcePath, extname2(asset.sourcePath)));
     const sourceDigest = await fileHash(prepared.path);
-    let destinationPath = join2(canonicalDestinationDirectory, `${stem}${extension}`);
+    let destinationPath = join3(canonicalDestinationDirectory, `${stem}${extension}`);
     try {
       if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
-      destinationPath = join2(canonicalDestinationDirectory, `${stem}-${sourceDigest.slice(0, 8)}${extension}`);
+      destinationPath = join3(canonicalDestinationDirectory, `${stem}-${sourceDigest.slice(0, 8)}${extension}`);
       try {
         if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
       } catch {
       }
     } catch {
     }
-    if (!isWithin2(canonicalRoot, await realpath2(dirname2(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
+    if (!isWithin2(canonicalRoot, await realpath2(dirname3(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
     await copyFile2(prepared.path, destinationPath, constants2.COPYFILE_EXCL);
     return this.result(canonicalRoot, destinationPath, false, prepared);
   }
@@ -21648,7 +21974,7 @@ var WorkspaceRegistry = class {
     if (sourceExtension === ".webp") {
       return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
     }
-    if (this.platform !== "darwin" || !existsSync2(this.imageProcessorPath)) return fallback("macOS sips \u4E0D\u53EF\u7528\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6");
+    if (this.platform !== "darwin" || !existsSync3(this.imageProcessorPath)) return fallback("macOS sips \u4E0D\u53EF\u7528\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6");
     let temporaryPath = null;
     try {
       const inspected = await execFileAsync2(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15e3 });
@@ -21664,8 +21990,8 @@ var WorkspaceRegistry = class {
       const digest = await fileHash(asset.sourcePath);
       await mkdir2(this.derivativeCacheRoot, { recursive: true });
       const canonicalCacheRoot = await realpath2(this.derivativeCacheRoot);
-      const cachePath = join2(canonicalCacheRoot, `${digest.slice(0, 32)}-${recipe}${targetExtension}`);
-      if (existsSync2(cachePath)) {
+      const cachePath = join3(canonicalCacheRoot, `${digest.slice(0, 32)}-${recipe}${targetExtension}`);
+      if (existsSync3(cachePath)) {
         const cachedStat = await lstat2(cachePath);
         if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("\u5F15\u7528\u7F13\u5B58\u4E0D\u662F\u5B89\u5168\u7684\u666E\u901A\u6587\u4EF6");
         if (cachedStat.size >= sourceStat.size) {
@@ -21706,15 +22032,51 @@ var WorkspaceRegistry = class {
 
 // src/server.ts
 var PANEL_URI = "ui://pinterest-reference-panel/panel.html";
-var moduleDirectory = dirname3(fileURLToPath(import.meta.url));
-var panelHtml = readFileSync(join3(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
+var moduleDirectory = dirname4(fileURLToPath2(import.meta.url));
+var panelHtml = readFileSync(join4(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
 var inbox = new InboxService();
 var workspaces = new WorkspaceRegistry();
+var localPanel = null;
+var localPanelStart = null;
+var localPanelStop = null;
+async function ensureLocalPanel() {
+  if (localPanelStop) await localPanelStop;
+  if (localPanel) return localPanel;
+  if (!localPanelStart) {
+    const configuredPort = process.env.PINTEREST_PANEL_PORT ? Number(process.env.PINTEREST_PANEL_PORT) : 0;
+    localPanelStart = startLocalPanelServer({ inbox, port: configuredPort }).then((handle) => {
+      localPanel = handle;
+      return handle;
+    }).finally(() => {
+      localPanelStart = null;
+    });
+  }
+  return localPanelStart;
+}
+async function stopLocalPanel() {
+  if (!localPanelStop) {
+    localPanelStop = (async () => {
+      const handle = localPanel ?? (localPanelStart ? await localPanelStart : null);
+      if (!handle) return false;
+      await handle.close();
+      if (localPanel === handle) localPanel = null;
+      return true;
+    })().finally(() => {
+      localPanelStop = null;
+    });
+  }
+  return localPanelStop;
+}
+function reportInternalError(context, error2) {
+  const detail = error2 instanceof Error ? error2.stack ?? error2.message : String(error2);
+  process.stderr.write(`[pinterest-reference-panel] ${context}: ${detail}
+`);
+}
 var server = new McpServer(
   { name: "pinterest-reference-panel", version: "0.4.0" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "Browse local PinterestInbox images. Import only an explicitly selected indexed asset into the current workspace. Never accept arbitrary source URLs or output paths."
+    instructions: "Use open_pinterest_inbox_web as the primary experience: open its loopback URL in the Codex in-app browser, then let the user click an indexed image to copy its canonical absolute path and paste it into the conversation. Do not auto-send a message, re-encode, copy, or modify the selected source. The embedded workspace-import panel remains a legacy fallback only. Never accept arbitrary source URLs or paths."
   }
 );
 async function workspaceCandidate(explicitRoot) {
@@ -21724,7 +22086,7 @@ async function workspaceCandidate(explicitRoot) {
       const result = await server.server.listRoots();
       const fileRoots = result.roots.map((root) => {
         try {
-          return root.uri.startsWith("file:") ? fileURLToPath(root.uri) : null;
+          return root.uri.startsWith("file:") ? fileURLToPath2(root.uri) : null;
         } catch {
           return null;
         }
@@ -21803,10 +22165,86 @@ server.registerTool(
   })
 );
 server.registerTool(
+  "open_pinterest_inbox_web",
+  {
+    title: "\u6253\u5F00 Pinterest Inbox \u672C\u5730\u7F51\u9875",
+    description: "\u542F\u52A8\u53EA\u7ED1\u5B9A\u672C\u673A\u56DE\u73AF\u5730\u5740\u7684 Pinterest Inbox \u7011\u5E03\u6D41\u7F51\u9875\uFF0C\u5E76\u8FD4\u56DE\u53EF\u5728 Codex \u5185\u5D4C\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\u7684 URL\u3002",
+    inputSchema: {},
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u5C31\u7EEA"
+    }
+  },
+  async () => {
+    try {
+      const handle = await ensureLocalPanel();
+      return {
+        structuredContent: { status: "running", url: handle.url, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
+        content: [{ type: "text", text: `Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u542F\u52A8\uFF1A${handle.url}\u3002\u8BF7\u5728 Codex \u5185\u5D4C\u6D4F\u89C8\u5668\u53F3\u4FA7\u6253\u5F00\u6B64\u5730\u5740\u3002` }]
+      };
+    } catch (error2) {
+      reportInternalError("local panel start failed", error2);
+      return {
+        isError: true,
+        content: [{ type: "text", text: "\u65E0\u6CD5\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
+      };
+    }
+  }
+);
+server.registerTool(
+  "get_pinterest_inbox_web_status",
+  {
+    title: "\u67E5\u770B Pinterest Inbox \u7F51\u9875\u72B6\u6001",
+    description: "\u67E5\u770B\u5F53\u524D\u4EFB\u52A1\u4E2D\u7684 Pinterest Inbox \u672C\u5730\u7F51\u9875\u662F\u5426\u6B63\u5728\u8FD0\u884C\u3002",
+    inputSchema: {},
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async () => {
+    const status = localPanelStop ? "stopping" : localPanel ? "running" : "stopped";
+    return {
+      structuredContent: {
+        status,
+        ...localPanel ? { url: localPanel.url, host: localPanel.host, port: localPanel.port } : {},
+        inbox: inbox.getSummary()
+      },
+      content: [{
+        type: "text",
+        text: status === "stopping" ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u505C\u6B62\u3002" : localPanel ? `Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u8FD0\u884C\uFF1A${localPanel.url}` : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5F53\u524D\u672A\u542F\u52A8\u3002"
+      }]
+    };
+  }
+);
+server.registerTool(
+  "stop_pinterest_inbox_web",
+  {
+    title: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875",
+    description: "\u505C\u6B62\u5F53\u524D\u4EFB\u52A1\u7684\u672C\u5730\u7F51\u9875\u670D\u52A1\uFF1BInbox \u76D1\u542C\u548C\u65E7 MCP \u9762\u677F\u4FDD\u6301\u53EF\u7528\u3002",
+    inputSchema: {},
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62"
+    }
+  },
+  async () => {
+    try {
+      const stopped = await stopLocalPanel();
+      return {
+        structuredContent: { status: "stopped", wasRunning: stopped, inbox: inbox.getSummary() },
+        content: [{ type: "text", text: stopped ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62\uFF1BInbox \u76D1\u542C\u4ECD\u5728\u8FD0\u884C\u3002" : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u539F\u672C\u5C31\u672A\u542F\u52A8\u3002" }]
+      };
+    } catch (error2) {
+      reportInternalError("local panel stop failed", error2);
+      return { isError: true, content: [{ type: "text", text: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u5931\u8D25\uFF1B\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" }] };
+    }
+  }
+);
+server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "\u6253\u5F00 Pinterest Inbox",
-    description: "\u6253\u5F00\u672C\u5730 Pinterest Inbox \u7D20\u6750\u680F\u3002\u5728 Codex \u4E2D\u8BF7\u5C06\u5F53\u524D\u5DE5\u4F5C\u533A\u7EDD\u5BF9\u8DEF\u5F84\u4F5C\u4E3A workspaceRoot \u4F20\u5165\uFF0C\u4EE5\u4FBF\u5355\u51FB\u5BFC\u5165\u56FE\u7247\u3002",
+    title: "\u6253\u5F00 Pinterest Inbox \u65E7\u9762\u677F",
+    description: "\u6253\u5F00\u65E7\u7684\u5185\u5D4C MCP \u7D20\u6750\u9762\u677F\uFF0C\u4F5C\u4E3A\u672C\u5730\u7F51\u9875\u4E0D\u53EF\u7528\u65F6\u7684\u5DE5\u4F5C\u533A\u5BFC\u5165\u56DE\u6EDA\u65B9\u6848\u3002",
     inputSchema: { workspaceRoot: external_exports.string().optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
@@ -21847,15 +22285,58 @@ server.registerTool(
 );
 async function startServer() {
   await inbox.start();
-  await server.connect(new StdioServerTransport());
+  const transport = new StdioServerTransport();
+  const requestShutdown = () => {
+    void shutdown().catch((error2) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error2 instanceof Error ? error2.message : String(error2)}
+`);
+      process.exitCode = 1;
+      const forceExit = setTimeout(() => process.exit(1), 1e3);
+      forceExit.unref();
+    });
+  };
+  transport.onclose = requestShutdown;
+  process.stdin.once("end", requestShutdown);
+  process.stdin.once("close", requestShutdown);
+  try {
+    await server.connect(transport);
+  } catch (error2) {
+    process.stdin.off("end", requestShutdown);
+    process.stdin.off("close", requestShutdown);
+    await inbox.close();
+    throw error2;
+  }
 }
+var shutdownPromise = null;
 async function shutdown() {
-  await inbox.close();
-  await server.close();
+  if (!shutdownPromise) {
+    shutdownPromise = (async () => {
+      try {
+        await stopLocalPanel();
+      } finally {
+        try {
+          await inbox.close();
+        } finally {
+          await server.close();
+        }
+      }
+    })();
+  }
+  return shutdownPromise;
 }
-process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
-process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+function shutdownFromSignal() {
+  void shutdown().then(
+    () => process.exit(0),
+    (error2) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error2 instanceof Error ? error2.message : String(error2)}
+`);
+      process.exit(1);
+    }
+  );
+}
+process.once("SIGINT", shutdownFromSignal);
+process.once("SIGTERM", shutdownFromSignal);
+if (process.argv[1] && fileURLToPath2(import.meta.url) === process.argv[1]) {
   startServer().catch((error2) => {
     process.stderr.write(`[pinterest-reference-panel] ${error2 instanceof Error ? error2.stack ?? error2.message : String(error2)}
 `);
@@ -21868,6 +22349,8 @@ export {
   inbox,
   parseInboxFilename,
   server,
+  startLocalPanelServer,
   startServer,
-  workspaces
+  workspaces,
+  writeTextToMacClipboard
 };
