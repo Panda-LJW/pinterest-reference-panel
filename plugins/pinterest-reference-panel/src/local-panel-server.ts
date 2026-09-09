@@ -64,7 +64,7 @@ function requestCookie(request: IncomingMessage, name: string) {
 function assertLoopbackRequest(request: IncomingMessage, expectedHost: string) {
   const remoteAddress = request.socket.remoteAddress;
   if (remoteAddress !== LOOPBACK_HOST && remoteAddress !== `::ffff:${LOOPBACK_HOST}`) {
-    throw new HttpError(403, "仅允许本机访问 Pinterest Inbox 面板");
+    throw new HttpError(403, "仅允许本机访问 Pinterest BoardFlow 面板");
   }
   if (request.headers.host !== expectedHost) {
     throw new HttpError(421, "请求主机与本地面板不匹配");
@@ -381,7 +381,7 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
   const address = httpServer.address();
   if (!address || typeof address === "string") {
     httpServer.close();
-    throw new Error("无法确定 Pinterest Inbox 本地面板端口");
+    throw new Error("无法确定 Pinterest BoardFlow 本地面板端口");
   }
   origin = `http://${LOOPBACK_HOST}:${address.port}`;
   expectedHost = `${LOOPBACK_HOST}:${address.port}`;

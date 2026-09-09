@@ -110,6 +110,8 @@ test("accepts only static HTTPS pinimg assets and selects the largest srcset", a
 
 test("manifest keeps the browser permission surface narrow", async () => {
   const manifest = JSON.parse(await readFile(new URL("manifest.json", extensionRoot), "utf8"));
+  assert.equal(manifest.name, "Pinterest BoardFlow Downloader");
+  assert.equal(manifest.version, "0.4.3");
   assert.deepEqual(manifest.permissions, ["downloads", "offscreen", "storage"]);
   assert.deepEqual(manifest.host_permissions, ["https://*.pinterest.com/*", "https://*.pinimg.com/*"]);
   assert.deepEqual(manifest.content_scripts[0].matches, ["https://*.pinterest.com/*"]);

@@ -21635,7 +21635,7 @@ var InboxService = class {
       return;
     }
     if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
-      throw new Error("Pinterest Inbox \u957F\u671F\u5E93\u4E0E\u4E34\u65F6\u76EE\u5F55\u4E0D\u80FD\u76F8\u4E92\u5D4C\u5957");
+      throw new Error("Pinterest BoardFlow \u957F\u671F\u5E93\u4E0E\u4E34\u65F6\u76EE\u5F55\u4E0D\u80FD\u76F8\u4E92\u5D4C\u5957");
     }
     const sourceFiles = await walkImages(canonicalStaging);
     const next = {
@@ -21828,7 +21828,7 @@ var InboxService = class {
     const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
       try {
         const thumbnail = await this.getThumbnail(asset.id);
-        if (!thumbnail) throw new Error("\u56FE\u7247\u5DF2\u79BB\u5F00 Pinterest Inbox \u6216\u4E0D\u518D\u53EF\u8BFB");
+        if (!thumbnail) throw new Error("\u56FE\u7247\u5DF2\u79BB\u5F00 Pinterest BoardFlow \u7D20\u6750\u5E93\u6216\u4E0D\u518D\u53EF\u8BFB");
         return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null];
       } catch (error2) {
         return [asset.id, null, error2 instanceof Error ? error2.message : String(error2)];
@@ -22034,7 +22034,7 @@ function requestCookie(request, name) {
 function assertLoopbackRequest(request, expectedHost) {
   const remoteAddress = request.socket.remoteAddress;
   if (remoteAddress !== LOOPBACK_HOST && remoteAddress !== `::ffff:${LOOPBACK_HOST}`) {
-    throw new HttpError(403, "\u4EC5\u5141\u8BB8\u672C\u673A\u8BBF\u95EE Pinterest Inbox \u9762\u677F");
+    throw new HttpError(403, "\u4EC5\u5141\u8BB8\u672C\u673A\u8BBF\u95EE Pinterest BoardFlow \u9762\u677F");
   }
   if (request.headers.host !== expectedHost) {
     throw new HttpError(421, "\u8BF7\u6C42\u4E3B\u673A\u4E0E\u672C\u5730\u9762\u677F\u4E0D\u5339\u914D");
@@ -22333,7 +22333,7 @@ async function startLocalPanelServer(options) {
   const address = httpServer.address();
   if (!address || typeof address === "string") {
     httpServer.close();
-    throw new Error("\u65E0\u6CD5\u786E\u5B9A Pinterest Inbox \u672C\u5730\u9762\u677F\u7AEF\u53E3");
+    throw new Error("\u65E0\u6CD5\u786E\u5B9A Pinterest BoardFlow \u672C\u5730\u9762\u677F\u7AEF\u53E3");
   }
   origin = `http://${LOOPBACK_HOST}:${address.port}`;
   expectedHost = `${LOOPBACK_HOST}:${address.port}`;
@@ -22554,10 +22554,10 @@ function reportInternalError(context, error2) {
 `);
 }
 var server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.4.0" },
+  { name: "pinterest-reference-panel", version: "0.4.1" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "When Pinterest Inbox is selected or mentioned, an unqualified request to open it (including \u6253\u5F00\u9879\u76EE) means launch its running material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
+    instructions: "When Pinterest BoardFlow (formerly Pinterest Inbox) is selected or mentioned, an unqualified request to open it (including \u6253\u5F00\u9879\u76EE) means launch its running Board-style masonry material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
   }
 );
 async function workspaceCandidate(explicitRoot) {
@@ -22585,7 +22585,7 @@ async function panelResult(options) {
     if (summary.version === options.knownVersion) {
       return {
         structuredContent: { mode: "inbox", unchanged: true, ...summary },
-        content: [{ type: "text", text: "Pinterest Inbox \u6CA1\u6709\u53D8\u5316\u3002" }],
+        content: [{ type: "text", text: "Pinterest BoardFlow \u6CA1\u6709\u53D8\u5316\u3002" }],
         _meta: { pinterestInbox: { thumbnails: {}, thumbnailErrors: {} } }
       };
     }
@@ -22601,7 +22601,7 @@ async function panelResult(options) {
     structuredContent: { ...pageResult.page, ...publicWorkspace ? { workspace: publicWorkspace } : {} },
     content: [{
       type: "text",
-      text: `Pinterest Inbox \u5DF2\u8BFB\u53D6 ${pageResult.page.total} \u5F20\u56FE\u7247\u3002${workspace?.available ? `\u5F53\u524D\u5DE5\u4F5C\u533A\uFF1A${workspace.name}\u3002` : ""}`
+      text: `Pinterest BoardFlow \u5DF2\u8BFB\u53D6 ${pageResult.page.total} \u5F20\u56FE\u7247\u3002${workspace?.available ? `\u5F53\u524D\u5DE5\u4F5C\u533A\uFF1A${workspace.name}\u3002` : ""}`
     }],
     _meta: {
       pinterestInbox: {
@@ -22621,14 +22621,14 @@ server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => 
     text: panelHtml,
     _meta: {
       ui: { prefersBorder: false },
-      "openai/widgetDescription": "Pinterest Inbox \u672C\u5730\u7D20\u6750\u7011\u5E03\u6D41\uFF0C\u53EF\u5C06\u9009\u4E2D\u56FE\u7247\u5BFC\u5165\u5F53\u524D\u5DE5\u4F5C\u533A\u3002"
+      "openai/widgetDescription": "Pinterest BoardFlow \u672C\u5730 Board \u7011\u5E03\u6D41\u770B\u677F\uFF0C\u53EF\u5C06\u9009\u4E2D\u56FE\u7247\u5BFC\u5165\u5F53\u524D\u5DE5\u4F5C\u533A\u3002"
     }
   }]
 }));
 server.registerTool(
   "list_pinterest_inbox",
   {
-    title: "\u8BFB\u53D6 Pinterest Inbox",
+    title: "\u8BFB\u53D6 Pinterest BoardFlow",
     description: "\u5206\u9875\u8BFB\u53D6\u672C\u5730 PinterestInbox \u7684\u56FE\u7247\u4E0E\u56FE\u7248\u76EE\u5F55\u3002",
     inputSchema: {
       cursor: external_exports.string().optional(),
@@ -22648,13 +22648,13 @@ server.registerTool(
 server.registerTool(
   "open_pinterest_inbox_web",
   {
-    title: "\u542F\u52A8 Pinterest Inbox \u53F3\u4FA7\u7D20\u6750\u9762\u677F",
-    description: "\u9009\u62E9\u6216\u63D0\u5230 Pinterest Inbox \u63D2\u4EF6\u540E\u8981\u6C42\u6253\u5F00/\u542F\u52A8\uFF08\u5982\u2018\u6253\u5F00\u9879\u76EE\u2019\uFF09\u65F6\u8C03\u7528\u3002\u542F\u52A8\u7D20\u6750\u5DE5\u4F5C\u53F0\u540E\uFF0C\u7EE7\u7EED\u8C03\u7528 Codex open_in_codex\uFF0C\u4EE5 target.type=browser\u3001target.url=\u8FD4\u56DE\u7684\u5B8C\u6574 URL\u3001placement=right \u663E\u793A\u5230\u5F53\u524D\u4EFB\u52A1\u53F3\u4FA7\u3002\u9996\u6B21\u4E0D\u4F20\u53C2\u6570\u521B\u5EFA\u72EC\u7ACB\u53C2\u8003\u7BEE\uFF1B\u4FDD\u5B58 referenceSessionId\uFF0C\u91CD\u5F00\u6216\u8BFB\u53D6\u9009\u56FE\u65F6\u4F20\u56DE\uFF0C\u4E0D\u5F97\u501F\u7528\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD\u3002\u53EA\u6709\u660E\u786E\u8981\u6E90\u7801\u6216\u6587\u6863\u65F6\u624D\u6253\u5F00\u6587\u4EF6\u3002",
+    title: "\u542F\u52A8 Pinterest BoardFlow \u7011\u5E03\u6D41\u770B\u677F",
+    description: "\u9009\u62E9\u6216\u63D0\u5230 Pinterest BoardFlow\uFF08\u65E7\u79F0 Pinterest Inbox\uFF09\u63D2\u4EF6\u540E\u8981\u6C42\u6253\u5F00/\u542F\u52A8\uFF08\u5982\u2018\u6253\u5F00\u9879\u76EE\u2019\uFF09\u65F6\u8C03\u7528\u3002\u542F\u52A8 Board \u7011\u5E03\u6D41\u7D20\u6750\u770B\u677F\u540E\uFF0C\u7EE7\u7EED\u8C03\u7528 Codex open_in_codex\uFF0C\u4EE5 target.type=browser\u3001target.url=\u8FD4\u56DE\u7684\u5B8C\u6574 URL\u3001placement=right \u663E\u793A\u5230\u5F53\u524D\u4EFB\u52A1\u53F3\u4FA7\u3002\u9996\u6B21\u4E0D\u4F20\u53C2\u6570\u521B\u5EFA\u72EC\u7ACB\u53C2\u8003\u7BEE\uFF1B\u4FDD\u5B58 referenceSessionId\uFF0C\u91CD\u5F00\u6216\u8BFB\u53D6\u9009\u56FE\u65F6\u4F20\u56DE\uFF0C\u4E0D\u5F97\u501F\u7528\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD\u3002\u53EA\u6709\u660E\u786E\u8981\u6E90\u7801\u6216\u6587\u6863\u65F6\u624D\u6253\u5F00\u6587\u4EF6\u3002",
     inputSchema: { referenceSessionId: external_exports.string().regex(REFERENCE_SESSION_PATTERN).optional() },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     _meta: {
-      "openai/toolInvocation/invoking": "\u6B63\u5728\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
-      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u5C31\u7EEA"
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u542F\u52A8 Pinterest BoardFlow\u2026",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow \u5DF2\u5C31\u7EEA"
     }
   },
   async ({ referenceSessionId }) => {
@@ -22664,13 +22664,13 @@ server.registerTool(
       const url = `${handle.url}?ref=${id}`;
       return {
         structuredContent: { status: "running", url, referenceSessionId: id, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
-        content: [{ type: "text", text: `Pinterest Inbox \u670D\u52A1\u5DF2\u5C31\u7EEA\uFF1A${url}\u3002\u4E0B\u4E00\u6B65\u5FC5\u987B\u8C03\u7528 Codex open_in_codex\uFF1Atarget={type:"browser",url:"${url}"}\uFF0Cplacement="right"\u3002\u670D\u52A1\u5C31\u7EEA\u4E0D\u7B49\u4E8E\u9762\u677F\u5DF2\u663E\u793A\uFF0C\u8BF7\u6839\u636E\u6D4F\u89C8\u5668\u5DE5\u5177\u7ED3\u679C\u62A5\u544A\u5DF2\u6253\u5F00\u6216\u5DF2\u6392\u961F\u3002\u4FDD\u7559\u672C\u4EFB\u52A1\u7684\u53C2\u8003\u4F1A\u8BDD ${id}\u3002\u7528\u6237\u9009\u56FE\u540E\uFF0C\u901A\u8FC7 get_pinterest_reference_selection \u8BFB\u53D6\u8BE5\u4F1A\u8BDD\uFF0C\u518D\u8BFB\u53D6\u539F\u56FE\u3002` }]
+        content: [{ type: "text", text: `Pinterest BoardFlow \u670D\u52A1\u5DF2\u5C31\u7EEA\uFF1A${url}\u3002\u4E0B\u4E00\u6B65\u5FC5\u987B\u8C03\u7528 Codex open_in_codex\uFF1Atarget={type:"browser",url:"${url}"}\uFF0Cplacement="right"\u3002\u670D\u52A1\u5C31\u7EEA\u4E0D\u7B49\u4E8E\u770B\u677F\u5DF2\u663E\u793A\uFF0C\u8BF7\u6839\u636E\u6D4F\u89C8\u5668\u5DE5\u5177\u7ED3\u679C\u62A5\u544A\u5DF2\u6253\u5F00\u6216\u5DF2\u6392\u961F\u3002\u4FDD\u7559\u672C\u4EFB\u52A1\u7684\u53C2\u8003\u4F1A\u8BDD ${id}\u3002\u7528\u6237\u9009\u56FE\u540E\uFF0C\u901A\u8FC7 get_pinterest_reference_selection \u8BFB\u53D6\u8BE5\u4F1A\u8BDD\uFF0C\u518D\u8BFB\u53D6\u539F\u56FE\u3002` }]
       };
     } catch (error2) {
       reportInternalError("local panel start failed", error2);
       return {
         isError: true,
-        content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u65E0\u6CD5\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
+        content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u65E0\u6CD5\u542F\u52A8 Pinterest BoardFlow \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
       };
     }
   }
@@ -22703,8 +22703,8 @@ ${file.path}`).join("\n")}` }]
 server.registerTool(
   "get_pinterest_inbox_web_status",
   {
-    title: "\u67E5\u770B Pinterest Inbox \u7F51\u9875\u72B6\u6001",
-    description: "\u67E5\u770B\u5F53\u524D\u4EFB\u52A1\u4E2D\u7684 Pinterest Inbox \u672C\u5730\u7F51\u9875\u662F\u5426\u6B63\u5728\u8FD0\u884C\u3002",
+    title: "\u67E5\u770B Pinterest BoardFlow \u7F51\u9875\u72B6\u6001",
+    description: "\u67E5\u770B\u5F53\u524D\u4EFB\u52A1\u4E2D\u7684 Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u662F\u5426\u6B63\u5728\u8FD0\u884C\u3002",
     inputSchema: {},
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },
@@ -22718,7 +22718,7 @@ server.registerTool(
       },
       content: [{
         type: "text",
-        text: status === "stopping" ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u505C\u6B62\u3002" : localPanel ? `Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u8FD0\u884C\uFF1A${localPanel.url}` : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5F53\u524D\u672A\u542F\u52A8\u3002"
+        text: status === "stopping" ? "Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u6B63\u5728\u505C\u6B62\u3002" : localPanel ? `Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u6B63\u5728\u8FD0\u884C\uFF1A${localPanel.url}` : "Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u5F53\u524D\u672A\u542F\u52A8\u3002"
       }]
     };
   }
@@ -22726,13 +22726,13 @@ server.registerTool(
 server.registerTool(
   "stop_pinterest_inbox_web",
   {
-    title: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875",
+    title: "\u505C\u6B62 Pinterest BoardFlow \u672C\u5730\u7F51\u9875",
     description: "\u505C\u6B62\u5F53\u524D\u4EFB\u52A1\u7684\u672C\u5730\u7F51\u9875\u670D\u52A1\uFF1BInbox \u76D1\u542C\u548C\u65E7 MCP \u9762\u677F\u4FDD\u6301\u53EF\u7528\u3002",
     inputSchema: {},
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
-      "openai/toolInvocation/invoking": "\u6B63\u5728\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
-      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62"
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u505C\u6B62 Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u2026",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62"
     }
   },
   async () => {
@@ -22740,26 +22740,26 @@ server.registerTool(
       const stopped = await stopLocalPanel();
       return {
         structuredContent: { status: "stopped", wasRunning: stopped, inbox: inbox.getSummary() },
-        content: [{ type: "text", text: stopped ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62\uFF1BInbox \u76D1\u542C\u4ECD\u5728\u8FD0\u884C\u3002" : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u539F\u672C\u5C31\u672A\u542F\u52A8\u3002" }]
+        content: [{ type: "text", text: stopped ? "Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62\uFF1BInbox \u76D1\u542C\u4ECD\u5728\u8FD0\u884C\u3002" : "Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u539F\u672C\u5C31\u672A\u542F\u52A8\u3002" }]
       };
     } catch (error2) {
       reportInternalError("local panel stop failed", error2);
-      return { isError: true, content: [{ type: "text", text: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u5931\u8D25\uFF1B\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" }] };
+      return { isError: true, content: [{ type: "text", text: "\u505C\u6B62 Pinterest BoardFlow \u672C\u5730\u7F51\u9875\u5931\u8D25\uFF1B\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" }] };
     }
   }
 );
 server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "\u6253\u5F00 Pinterest Inbox \u65E7\u9762\u677F",
+    title: "\u6253\u5F00 Pinterest BoardFlow \u65E7\u9762\u677F",
     description: "\u6253\u5F00\u65E7\u7684\u5185\u5D4C MCP \u7D20\u6750\u9762\u677F\uFF0C\u4F5C\u4E3A\u672C\u5730\u7F51\u9875\u4E0D\u53EF\u7528\u65F6\u7684\u5DE5\u4F5C\u533A\u5BFC\u5165\u56DE\u6EDA\u65B9\u6848\u3002",
     inputSchema: { workspaceRoot: external_exports.string().optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
       ui: { resourceUri: PANEL_URI },
       "openai/outputTemplate": PANEL_URI,
-      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest Inbox\u2026",
-      "openai/toolInvocation/invoked": "Pinterest Inbox \u5DF2\u6253\u5F00"
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest BoardFlow\u2026",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow \u5DF2\u6253\u5F00"
     }
   },
   async ({ workspaceRoot }) => panelResult({ ...workspaceRoot ? { workspaceRoot } : {}, registerWorkspace: true })
@@ -22768,7 +22768,7 @@ server.registerTool(
   "import_pinterest_reference",
   {
     title: "\u5BFC\u5165 Pinterest \u53C2\u8003\u56FE",
-    description: "\u5C06 Pinterest Inbox \u4E2D\u660E\u786E\u9009\u4E2D\u7684\u4E00\u5F20\u5DF2\u7D22\u5F15\u56FE\u7247\u590D\u5236\u5230\u5F53\u524D\u5DE5\u4F5C\u533A references/pinterest \u76EE\u5F55\u3002",
+    description: "\u5C06 Pinterest BoardFlow \u4E2D\u660E\u786E\u9009\u4E2D\u7684\u4E00\u5F20\u5DF2\u7D22\u5F15\u56FE\u7247\u590D\u5236\u5230\u5F53\u524D\u5DE5\u4F5C\u533A references/pinterest \u76EE\u5F55\u3002",
     inputSchema: { assetId: external_exports.string().min(1), workspaceToken: external_exports.string().min(1) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {

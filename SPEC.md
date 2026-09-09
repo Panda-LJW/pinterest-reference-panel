@@ -1,8 +1,8 @@
-# Pinterest Inbox 规格
+# Pinterest BoardFlow for Codex 规格
 
 ## 产品目标
 
-首版面向 **macOS + Chrome**。用户在 Pinterest 图版页用精简 Chrome 扩展下载静态图片；Codex 插件只读取本地 Inbox。经用户于 2026-09-06 确认，主引用路线升级为当前任务参考篮：在 Codex 可见内嵌浏览器中查找、预览并选择最多 10 张有序素材，用户在原任务中描述需求，Codex 通过显式参考会话 ID 读取这组原文件。单张与批量复制路径继续可用。主路线不复制、压缩或修改素材，也不自动发送消息。该路线于 2026-09-09 完成真实 Chrome 与 Codex 宿主验收。
+公开产品名为 **Pinterest BoardFlow for Codex**，定位为“Pinterest 下载器 · Board 瀑布流看板 · Codex 视觉参考插件”。首版面向 **macOS + Chrome**。用户在 Pinterest 图版页用精简 Chrome 扩展下载静态图片；Codex 插件只读取本地 Inbox。经用户于 2026-09-06 确认，主引用路线升级为当前任务参考篮：在 Codex 可见内嵌浏览器中查找、预览并选择最多 10 张有序素材，用户在原任务中描述需求，Codex 通过显式参考会话 ID 读取这组原文件。单张与批量复制路径继续可用。主路线不复制、压缩或修改素材，也不自动发送消息。该路线于 2026-09-09 完成真实 Chrome 与 Codex 宿主验收。为兼容既有安装，技术 ID、MCP 工具名与 `PinterestInbox` 存储目录不随公开品牌重命名。
 
 ```text
 Pinterest 图版

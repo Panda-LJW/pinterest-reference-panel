@@ -1,4 +1,4 @@
-# Pinterest Inbox Downloader
+# Pinterest BoardFlow Downloader
 
 面向 macOS + Chrome 的精简 Manifest V3 扩展。它只在 Pinterest 页面上收集静态图片，并通过 Chrome Downloads API 写入：
 
@@ -6,9 +6,9 @@
 ~/Downloads/PinterestInbox/<board-slug>/<safe-title>__pin-<pin-id>.<ext>
 ```
 
-**0.4.2 连续点图排队已通过真实 Pinterest 验收：**单张模式下载过程中可以继续点第二、第三张，按点击顺序逐张处理；重复点击仍在提交/下载中的同一图版 Pin 不会重复入队。面板显示整组进度，取消覆盖全部未完成项。保留 0.4.1 的面板重绘恢复、0.4.0 的多选与界面优化。三档质量、目录、文件名和权限保持兼容。
+**0.4.3 只更新公开名称：**扩展现名为 Pinterest BoardFlow Downloader，下载行为、权限、目录与 0.4.2 完全兼容。**0.4.2 连续点图排队已通过真实 Pinterest 验收：**单张模式下载过程中可以继续点第二、第三张，按点击顺序逐张处理；重复点击仍在提交/下载中的同一图版 Pin 不会重复入队。面板显示整组进度，取消覆盖全部未完成项。保留 0.4.1 的面板重绘恢复、0.4.0 的多选与界面优化。
 
-更新已有扩展：在 `chrome://extensions` 找到 **Pinterest Inbox Downloader**，点击重新加载，再刷新已打开的 Pinterest 页面。仅刷新网页不会加载新的后台程序。安装源仍是本目录。
+更新已有扩展：在 `chrome://extensions` 找到旧名称 **Pinterest Inbox Downloader**（重新加载后显示为 **Pinterest BoardFlow Downloader**），点击重新加载，再刷新已打开的 Pinterest 页面。仅刷新网页不会加载新的后台程序。安装源仍是本目录。
 
 ## 本地加载
 

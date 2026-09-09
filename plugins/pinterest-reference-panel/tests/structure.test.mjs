@@ -7,6 +7,8 @@ const pluginRoot = new URL("../", import.meta.url);
 test("manifest exposes the local MCP server and its narrow read/write scope", async () => {
   const manifest = JSON.parse(await readFile(new URL(".codex-plugin/plugin.json", pluginRoot), "utf8"));
   assert.equal(manifest.name, "pinterest-reference-panel");
+  assert.match(manifest.version, /^0\.4\.1\+codex\./);
+  assert.equal(manifest.interface.displayName, "Pinterest BoardFlow");
   assert.equal(manifest.mcpServers, "./.mcp.json");
   assert.deepEqual(manifest.interface.capabilities, ["Interactive", "Read", "Write"]);
 });

@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-09-09 — Pinterest BoardFlow 公开品牌更新
+
+- 任务目标：将公开名称更新为更易理解和传播的 **Pinterest BoardFlow for Codex**，同时在仓库、Codex 插件和 Chrome 扩展中明确表达 Pinterest 下载器、Board 瀑布流看板与 Codex 视觉参考插件三项核心能力。
+- 修改文件：更新根 README、SPEC、UX 方案、版本与锁文件；更新 Codex 插件清单、Skill、MCP 工具文案、两套素材面板、对应测试和构建后的运行时 bundle；更新 Chrome 扩展 manifest、面板标题、Offscreen 标题和扩展 README。仓库版本与 Codex 插件升至 0.4.1，Chrome 下载器仅因显示名称变化升至 0.4.3。
+- 关键决策：公开品牌使用 `Pinterest BoardFlow for Codex`，Codex 内显示 `Pinterest BoardFlow`，Chrome 内显示 `Pinterest BoardFlow Downloader`；GitHub 仓库目标 slug 为 `pinterest-boardflow-for-codex`。为避免破坏既有安装和素材，保留内部插件 ID `pinterest-reference-panel`、MCP 工具名、代码目录、缓存路径与 `PinterestInbox` 下载/长期库目录，不迁移或重命名用户文件；旧称 `Pinterest Inbox` 继续作为插件入口兼容别名。
+- 验证结果：根 `npm test` 完整通过，Codex 插件 62/62、Chrome 下载器 33/33，共 95/95；TypeScript 检查和 MCP runtime bundle 构建通过。`npm install --package-lock-only` 审计 127 个包且 0 个已知漏洞；插件清单通过 plugin-creator 校验，插件 Skill 通过 skill-creator 校验。0.4.3 未改变下载权限、队列、格式、路径或网络范围，因此沿用 0.4.2 已完成的真实 Pinterest/Chrome Downloads 行为验收，本轮不重复下载用户素材。
+- 未解决事项：已加载的 Codex 任务不会热更新插件名称，完成本机重装后仍需新建任务查看新名称；已加载的 Chrome 扩展需要在 `chrome://extensions` 手动重新加载，才会从旧名称切换到 0.4.3。GitHub 仓库重命名、公开 Release 与外部 URL 验收作为本轮发布动作在合并后完成。
+- 回滚提示：代码可回退到公开 `v0.4.0`；GitHub 仓库可改回旧 slug。内部 ID 与存储目录未变，回滚不涉及素材迁移或删除；发布前隐私历史 bundle 仍保留在本机忽略目录。
+
 ## 2026-08-30 — 本地右侧瀑布流与绝对路径复制
 
 - 任务目标：绕开当前 Codex 宿主未开放 `uploadFile` / `setWidgetState`、MCP Apps UI 只能出现在对话内以及 `ui/message` 会占用一轮对话的限制，把 Pinterest Inbox 主体验改为 Codex 右侧内嵌浏览器中的本地瀑布流；用户单击图片后只复制长期库原文件的真实绝对路径，再手动粘贴进当前对话。

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Pinterest Inbox Downloader",
-  "version": "0.4.2",
-  "description": "Download selected static Pinterest images into Downloads/PinterestInbox for the Codex Pinterest Inbox plugin.",
+  "name": "Pinterest BoardFlow Downloader",
+  "version": "0.4.3",
+  "description": "Download Pinterest images into a local Board library for the Pinterest BoardFlow Codex plugin.",
   "permissions": [
     "downloads",
     "offscreen",
@@ -29,6 +29,6 @@
     }
   ],
   "action": {
-    "default_title": "Pinterest Inbox Downloader"
+    "default_title": "Pinterest BoardFlow Downloader"
   }
 }
