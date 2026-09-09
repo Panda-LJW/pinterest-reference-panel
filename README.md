@@ -2,9 +2,53 @@
 
 **Pinterest 下载器 · Board 瀑布流看板 · Codex 视觉参考插件**
 
+<p align="center">
+  <img src="docs/images/boardflow-hero.png" alt="Pinterest BoardFlow for Codex 主视觉：Pinterest 下载器、Board 瀑布流和 Codex 参考篮" width="100%">
+</p>
+
 一个面向 **macOS + Chrome** 的本地视觉参考工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件在本机回环地址提供 Pins / Boards 瀑布流看板；点击素材即可复制长期库原文件的真实绝对路径，也可以把有序参考篮直接交给 Codex 使用。
 
-当前状态：**0.4.1 品牌更新已发布**。仓库与 Codex 插件版本为 `0.4.1`，随附的 Chrome 下载器独立版本为 `0.4.3`。本次只更新公开名称与说明，内部插件 ID `pinterest-reference-panel`、MCP 工具名和 `PinterestInbox` 目录保持不变，现有安装与素材兼容。
+> **工作流：** Pinterest 原图下载 → 本地长期素材库 → Board 瀑布流浏览 → 有序参考篮 → Codex 读取原图
+
+## 界面预览
+
+以下截图均来自当前版本的实际界面，使用本地生成的演示素材，**不包含 Pinterest 账号、私人 Board、真实收藏或本机路径**。
+
+### 在 Pinterest 页面上直接收集
+
+<table>
+  <tr>
+    <td width="72%"><img src="docs/images/boardflow-downloader.png" alt="Pinterest BoardFlow 下载器在演示图版上多选图片"></td>
+    <td width="28%"><img src="docs/images/boardflow-downloader-panel.png" alt="Pinterest BoardFlow 下载器控制面板"></td>
+  </tr>
+  <tr>
+    <td><strong>下载器实际运行效果</strong><br>单张、多选和整板下载，选中态直接反馈在 Pin 上。</td>
+    <td><strong>轻量控制面板</strong><br>设置保存质量，查看队列与下载进度。</td>
+  </tr>
+</table>
+
+### 在 Codex 中浏览并组装参考图
+
+<p align="center">
+  <img src="docs/images/boardflow-dashboard.png" alt="Pinterest BoardFlow Pins 瀑布流与有序参考篮" width="100%">
+</p>
+
+从长期素材库中搜索、预览和选图；底部参考篮保留明确顺序，交给 Codex 时按 `01 / 02 / 03` 读取原文件。
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/boardflow-boards.png" alt="Pinterest BoardFlow Boards 图版聚合视图"></td>
+    <td width="50%"><img src="docs/images/boardflow-preview.png" alt="Pinterest BoardFlow 原图预览弹窗"></td>
+  </tr>
+  <tr>
+    <td><strong>Boards 聚合</strong><br>保留 Pinterest 图版结构，适合按项目或风格浏览。</td>
+    <td><strong>原图预览</strong><br>键盘翻图、查看信息，并直接加入当前参考篮。</td>
+  </tr>
+</table>
+
+## 当前状态
+
+**0.4.1 品牌更新已发布**。仓库与 Codex 插件版本为 `0.4.1`，随附的 Chrome 下载器独立版本为 `0.4.3`。公开名称已更新，内部插件 ID `pinterest-reference-panel`、MCP 工具名和 `PinterestInbox` 目录保持不变，现有安装与素材兼容。
 
 2026-09-09 已在真实登录态 Pinterest、Chrome 0.4.2 扩展和 Codex 可见内嵌浏览器中完成端到端检查：连续点击 3 张不同图片并立即重复点击其中一张，最终只保存 3 张；多选 6 张后立即取消，最终保存 0 张、跳过 6 张；在 Codex 素材栏选择 3 张后，同一 `referenceSessionId` 经 MCP 返回相同顺序的原文件，Codex 已实际读取三张原图。批量复制的三条路径与系统剪贴板逐字节一致，包含中文文件名。自动测试共 95/95 通过，生产依赖与完整依赖审计均为 0 个已知漏洞。
 
