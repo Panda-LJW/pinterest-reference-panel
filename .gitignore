@@ -1,5 +1,6 @@
 node_modules/
 .playwright-cli/
 output/
+references/
 *.log
 .DS_Store

@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Pinterest Inbox Downloader",
+  "version": "0.4.2",
+  "description": "Download selected static Pinterest images into Downloads/PinterestInbox for the Codex Pinterest Inbox plugin.",
+  "permissions": [
+    "downloads",
+    "offscreen",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.pinterest.com/*",
+    "https://*.pinimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "minimum_chrome_version": "116",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.pinterest.com/*"
+      ],
+      "js": [
+        "shared.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Pinterest Inbox Downloader"
+  }
+}

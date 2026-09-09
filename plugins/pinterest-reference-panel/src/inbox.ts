@@ -1,0 +1,555 @@
+import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { createReadStream, existsSync, watch, type FSWatcher } from "node:fs";
+import { constants } from "node:fs";
+import { copyFile, link, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const IMAGE_EXTENSIONS = new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"]);
+const RECONCILE_INTERVAL_MS = 10_000;
+const WATCH_DEBOUNCE_MS = 250;
+
+export type WatcherStatus = "starting" | "watching" | "degraded" | "stopped";
+
+export type TransferSummary = {
+  moved: number;
+  deduplicated: number;
+  renamed: number;
+  failed: number;
+  pending: number;
+  lastRunAt: string | null;
+  lastError: string | null;
+};
+
+export type InboxAsset = {
+  id: string;
+  pinId: string;
+  boardId: string;
+  boardTitle: string;
+  title: string;
+  extension: string;
+  size: number;
+  updatedAt: string;
+  sourcePath: string;
+  sourceRelativePath: string;
+  signature: string;
+};
+
+export type PublicInboxAsset = Omit<InboxAsset, "sourcePath" | "sourceRelativePath" | "signature">;
+
+export type InboxBoard = {
+  id: string;
+  title: string;
+  pinCount: number;
+  coverAssetIds: string[];
+};
+
+export type InboxPage = {
+  mode: "inbox";
+  version: number;
+  total: number;
+  libraryTotal: number;
+  cursor: string | null;
+  nextCursor: string | null;
+  assets: PublicInboxAsset[];
+  boards: InboxBoard[];
+  watcherStatus: WatcherStatus;
+  transfer: TransferSummary;
+  refreshedAt: string;
+};
+
+export type InboxPageWithThumbnails = {
+  page: InboxPage;
+  thumbnails: Record<string, string>;
+  thumbnailErrors: Record<string, string>;
+};
+
+type InboxServiceOptions = {
+  inboxRoot?: string;
+  stagingRoot?: string;
+  cacheRoot?: string;
+  reconcileIntervalMs?: number;
+};
+
+export type InboxListOptions = {
+  cursor?: string;
+  limit?: number;
+  boardId?: string;
+  forceRescan?: boolean;
+  query?: string;
+  sort?: "recent" | "oldest" | "title";
+};
+
+function hash(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeRelativePath(value: string) {
+  return value.split(sep).join("/");
+}
+
+function isWithin(root: string, candidate: string) {
+  const pathFromRoot = relative(root, candidate);
+  return pathFromRoot === "" || (!pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== "..");
+}
+
+function humanizeSlug(value: string) {
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  })();
+  return decoded.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim() || "Unsorted";
+}
+
+export function parseInboxFilename(fileName: string) {
+  const extension = extname(fileName).toLowerCase();
+  const stem = basename(fileName, extension);
+  const titleFirstMatch = stem.match(/^(.+)__pin-([a-zA-Z0-9-]+)$/);
+  if (titleFirstMatch) {
+    return {
+      pinId: titleFirstMatch[2] ?? stem,
+      title: humanizeSlug(titleFirstMatch[1] ?? stem),
+      extension
+    };
+  }
+  const legacyMatch = stem.match(/^([a-zA-Z0-9-]+)__(.+)$/);
+  if (!legacyMatch) return { pinId: stem, title: humanizeSlug(stem), extension };
+  return {
+    pinId: legacyMatch[1] ?? stem,
+    title: humanizeSlug(legacyMatch[2] ?? stem),
+    extension
+  };
+}
+
+async function walkImages(root: string, directory = root): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths: string[] = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const absolutePath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...await walkImages(root, absolutePath));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const lowerName = entry.name.toLowerCase();
+    if (lowerName.endsWith(".crdownload") || lowerName.endsWith(".tmp")) continue;
+    if (!IMAGE_EXTENSIONS.has(extname(lowerName))) continue;
+    paths.push(absolutePath);
+  }
+  return paths;
+}
+
+async function hashFile(filePath: string) {
+  return new Promise<string>((resolveHash, rejectHash) => {
+    const digest = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => digest.update(chunk));
+    stream.once("error", rejectHash);
+    stream.once("end", () => resolveHash(digest.digest("hex")));
+  });
+}
+
+async function isStableFile(filePath: string) {
+  const initial = await stat(filePath);
+  if (!initial.isFile()) return false;
+  if (Date.now() - initial.mtimeMs > 1_000) return true;
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+  const settled = await stat(filePath);
+  return settled.isFile() && initial.size === settled.size && initial.mtimeMs === settled.mtimeMs;
+}
+
+async function mapWithConcurrency<T, R>(values: T[], concurrency: number, mapper: (value: T) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(values.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      const value = values[index];
+      if (value !== undefined) results[index] = await mapper(value);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker));
+  return results;
+}
+
+export class InboxService {
+  readonly inboxRoot: string;
+  readonly stagingRoot: string;
+  readonly cacheRoot: string;
+  private readonly reconcileIntervalMs: number;
+  private assets = new Map<string, InboxAsset>();
+  private version = 0;
+  private watchers: FSWatcher[] = [];
+  private reconcileTimer: NodeJS.Timeout | null = null;
+  private debounceTimer: NodeJS.Timeout | null = null;
+  private scanPromise: Promise<void> | null = null;
+  private reconcilePromise: Promise<void> | null = null;
+  private thumbnailPromises = new Map<string, Promise<{ data: Buffer; contentType: "image/jpeg" } | null>>();
+  private thumbnailActive = 0;
+  private thumbnailWaiters: Array<() => void> = [];
+  private reconcileQueued = false;
+  private watcherStatus: WatcherStatus = "stopped";
+  private transfer: TransferSummary = {
+    moved: 0,
+    deduplicated: 0,
+    renamed: 0,
+    failed: 0,
+    pending: 0,
+    lastRunAt: null,
+    lastError: null
+  };
+  private refreshedAt = new Date(0).toISOString();
+
+  constructor(options: InboxServiceOptions = {}) {
+    const configuredInbox = options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR;
+    this.inboxRoot = resolve(configuredInbox ?? join(homedir(), "Pictures", "PinterestInbox"));
+    this.stagingRoot = resolve(options.stagingRoot ?? process.env.PINTEREST_INBOX_STAGING_DIR ?? (configuredInbox ? this.inboxRoot : join(homedir(), "Downloads", "PinterestInbox")));
+    this.cacheRoot = resolve(options.cacheRoot ?? join(homedir(), "Library", "Caches", "pinterest-reference-panel", "thumbnails"));
+    this.reconcileIntervalMs = options.reconcileIntervalMs ?? RECONCILE_INTERVAL_MS;
+  }
+
+  async start() {
+    if (this.watcherStatus !== "stopped") return;
+    this.watcherStatus = "starting";
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    await mkdir(this.cacheRoot, { recursive: true });
+    await this.reconcile();
+    this.startWatchers();
+    this.reconcileTimer = setInterval(() => {
+      void this.reconcile().catch(() => { this.watcherStatus = "degraded"; });
+    }, this.reconcileIntervalMs);
+    this.reconcileTimer.unref();
+  }
+
+  private startWatchers() {
+    let degraded = false;
+    for (const root of new Set([this.inboxRoot, this.stagingRoot])) {
+      try {
+        const watcher = watch(root, { recursive: true }, () => this.scheduleReconcile());
+        watcher.on("error", () => { this.watcherStatus = "degraded"; });
+        this.watchers.push(watcher);
+      } catch {
+        degraded = true;
+      }
+    }
+    this.watcherStatus = degraded || this.watchers.length === 0 ? "degraded" : "watching";
+  }
+
+  private scheduleReconcile() {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      void this.reconcile().catch(() => { this.watcherStatus = "degraded"; });
+    }, WATCH_DEBOUNCE_MS);
+    this.debounceTimer.unref();
+  }
+
+  async reconcile() {
+    if (this.reconcilePromise) {
+      this.reconcileQueued = true;
+      return this.reconcilePromise;
+    }
+    this.reconcilePromise = (async () => {
+      do {
+        this.reconcileQueued = false;
+        await this.drainStaging();
+        await this.scan();
+      } while (this.reconcileQueued);
+    })().finally(() => { this.reconcilePromise = null; });
+    return this.reconcilePromise;
+  }
+
+  private async drainStaging() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    const canonicalInbox = await realpath(this.inboxRoot);
+    const canonicalStaging = await realpath(this.stagingRoot);
+    if (canonicalInbox === canonicalStaging) {
+      this.transfer = { ...this.transfer, pending: 0, lastRunAt: new Date().toISOString(), lastError: null };
+      return;
+    }
+    if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
+      throw new Error("Pinterest Inbox 长期库与临时目录不能相互嵌套");
+    }
+
+    const sourceFiles = await walkImages(canonicalStaging);
+    const next: TransferSummary = {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: 0,
+      pending: 0,
+      lastRunAt: new Date().toISOString(),
+      lastError: null
+    };
+    const errors: string[] = [];
+
+    for (const sourcePath of sourceFiles) {
+      try {
+        if (!await isStableFile(sourcePath)) {
+          next.pending += 1;
+          continue;
+        }
+        const sourceRelativePath = normalizeRelativePath(relative(canonicalStaging, sourcePath));
+        if (sourceRelativePath.startsWith("../") || sourceRelativePath === "..") throw new Error("暂存文件越过目录边界");
+        const sourceDigest = await hashFile(sourcePath);
+        const extension = extname(sourceRelativePath);
+        const stem = basename(sourceRelativePath, extension);
+        const relativeDirectory = relative(canonicalStaging, dirname(sourcePath));
+        const destinationDirectory = resolve(canonicalInbox, relativeDirectory);
+        await mkdir(destinationDirectory, { recursive: true });
+        const canonicalDestinationDirectory = await realpath(destinationDirectory);
+        if (!isWithin(canonicalInbox, canonicalDestinationDirectory)) throw new Error("目标图片目录越过长期库边界");
+
+        let destinationPath = join(canonicalDestinationDirectory, basename(sourceRelativePath));
+        let renamedForConflict = false;
+        for (let suffixLength = 8; ; suffixLength += 4) {
+          try {
+            const destinationStat = await lstat(destinationPath);
+            if (destinationStat.isFile() && await hashFile(destinationPath) === sourceDigest) {
+              await rm(sourcePath);
+              next.deduplicated += 1;
+              destinationPath = "";
+              break;
+            }
+          } catch (error) {
+            const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+            if (code !== "ENOENT") throw error;
+            break;
+          }
+          renamedForConflict = true;
+          destinationPath = join(canonicalDestinationDirectory, `${stem}--${sourceDigest.slice(0, Math.min(suffixLength, sourceDigest.length))}${extension}`);
+        }
+        if (!destinationPath) continue;
+
+        const temporaryPath = join(canonicalDestinationDirectory, `.${basename(destinationPath)}.${process.pid}.${Date.now()}.tmp`);
+        try {
+          await copyFile(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
+          if (await hashFile(temporaryPath) !== sourceDigest) throw new Error("搬运后文件校验失败");
+          await link(temporaryPath, destinationPath);
+          await rm(temporaryPath);
+          await rm(sourcePath);
+        } catch (error) {
+          await rm(temporaryPath, { force: true });
+          throw error;
+        }
+        next.moved += 1;
+        if (renamedForConflict) next.renamed += 1;
+      } catch (error) {
+        next.failed += 1;
+        next.pending += 1;
+        errors.push(`${basename(sourcePath)}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    next.lastError = errors.length ? errors.slice(0, 3).join("; ") : null;
+    this.transfer = next;
+  }
+
+  async scan() {
+    if (this.scanPromise) return this.scanPromise;
+    this.scanPromise = this.performScan().finally(() => { this.scanPromise = null; });
+    return this.scanPromise;
+  }
+
+  private async performScan() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    const files = await walkImages(this.inboxRoot);
+    const records = await mapWithConcurrency(files, 12, async (sourcePath) => {
+      const fileStat = await stat(sourcePath);
+      const sourceRelativePath = normalizeRelativePath(relative(this.inboxRoot, sourcePath));
+      const segments = sourceRelativePath.split("/");
+      const boardSlug = segments.length > 1 ? segments[0] ?? "unsorted" : "unsorted";
+      const parsed = parseInboxFilename(basename(sourcePath));
+      return {
+        id: hash(sourceRelativePath).slice(0, 24),
+        pinId: parsed.pinId,
+        boardId: boardSlug,
+        boardTitle: humanizeSlug(boardSlug),
+        title: parsed.title,
+        extension: parsed.extension,
+        size: fileStat.size,
+        updatedAt: fileStat.mtime.toISOString(),
+        sourcePath,
+        sourceRelativePath,
+        signature: hash(`${sourceRelativePath}:${fileStat.size}:${fileStat.mtimeMs}`).slice(0, 16)
+      } satisfies InboxAsset;
+    });
+    records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const nextAssets = new Map(records.map((record) => [record.id, record]));
+    const previousSignature = [...this.assets.values()].map((item) => item.signature).sort().join(":");
+    const nextSignature = records.map((item) => item.signature).sort().join(":");
+    if (previousSignature !== nextSignature) this.version += 1;
+    this.assets = nextAssets;
+    this.refreshedAt = new Date().toISOString();
+  }
+
+  getAsset(assetId: string) {
+    return this.assets.get(assetId) ?? null;
+  }
+
+  async resolveAsset(assetId: string) {
+    const asset = this.getAsset(assetId);
+    if (!asset) return null;
+    try {
+      const canonicalRoot = await realpath(this.inboxRoot);
+      const canonicalSource = await realpath(asset.sourcePath);
+      if (!isWithin(canonicalRoot, canonicalSource) || !(await stat(canonicalSource)).isFile()) return null;
+      return { ...asset, sourcePath: canonicalSource };
+    } catch {
+      return null;
+    }
+  }
+
+  private publicTransferSummary(): TransferSummary {
+    return {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: this.transfer.failed,
+      pending: this.transfer.pending,
+      lastRunAt: this.transfer.lastRunAt,
+      lastError: this.transfer.failed > 0
+        ? "有文件未能安全收取；原文件仍保留在 Downloads 临时区，请重试。"
+        : null
+    };
+  }
+
+  getSummary() {
+    return {
+      version: this.version,
+      total: this.assets.size,
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+
+  private buildBoards(records: InboxAsset[]) {
+    const boardMap = new Map<string, InboxAsset[]>();
+    for (const record of records) {
+      const items = boardMap.get(record.boardId) ?? [];
+      items.push(record);
+      boardMap.set(record.boardId, items);
+    }
+    return [...boardMap.entries()].map(([id, items]) => ({
+      id,
+      title: items[0]?.boardTitle ?? humanizeSlug(id),
+      pinCount: items.length,
+      coverAssetIds: items.slice(0, 3).map((item) => item.id)
+    })).sort((left, right) => left.title.localeCompare(right.title));
+  }
+
+  async getPublicPage(options: InboxListOptions = {}): Promise<InboxPage> {
+    if (options.forceRescan) await this.scan();
+    const records = [...this.assets.values()];
+    const words = (options.query ?? "").normalize("NFKC").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filteredRecords = records.filter(record => {
+      if (options.boardId && record.boardId !== options.boardId) return false;
+      const text = `${record.title} ${record.boardTitle} ${record.pinId}`.normalize("NFKC").toLocaleLowerCase();
+      return words.every(word => text.includes(word));
+    });
+    filteredRecords.sort((left, right) => {
+      const order = options.sort === "title" ? left.title.localeCompare(right.title, "zh-CN", { numeric: true })
+        : options.sort === "oldest" ? left.updatedAt.localeCompare(right.updatedAt)
+          : right.updatedAt.localeCompare(left.updatedAt);
+      return order || left.id.localeCompare(right.id);
+    });
+    const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
+    const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
+    const visible = filteredRecords.slice(offset, offset + limit);
+    return {
+      mode: "inbox",
+      version: this.version,
+      total: filteredRecords.length,
+      libraryTotal: records.length,
+      cursor: offset === 0 ? null : String(offset),
+      nextCursor: offset + visible.length < filteredRecords.length ? String(offset + visible.length) : null,
+      assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
+      boards: this.buildBoards(records),
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+
+  async getPage(options: InboxListOptions = {}): Promise<InboxPageWithThumbnails> {
+    const page = await this.getPublicPage(options);
+    const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
+      try {
+        const thumbnail = await this.getThumbnail(asset.id);
+        if (!thumbnail) throw new Error("图片已离开 Pinterest Inbox 或不再可读");
+        return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null] as const;
+      } catch (error) {
+        return [asset.id, null, error instanceof Error ? error.message : String(error)] as const;
+      }
+    });
+    const thumbnails: Record<string, string> = {};
+    const thumbnailErrors: Record<string, string> = {};
+    for (const [assetId, dataUrl, error] of thumbnailEntries) {
+      if (dataUrl) thumbnails[assetId] = dataUrl;
+      if (error) thumbnailErrors[assetId] = error;
+    }
+    return {
+      page,
+      thumbnails,
+      thumbnailErrors
+    };
+  }
+
+  private async withThumbnailSlot<T>(task: () => Promise<T>) {
+    if (this.thumbnailActive >= 4) await new Promise<void>((resolveWait) => this.thumbnailWaiters.push(resolveWait));
+    this.thumbnailActive += 1;
+    try {
+      return await task();
+    } finally {
+      this.thumbnailActive -= 1;
+      this.thumbnailWaiters.shift()?.();
+    }
+  }
+
+  async getThumbnail(assetId: string): Promise<{ data: Buffer; contentType: "image/jpeg" } | null> {
+    const asset = await this.resolveAsset(assetId);
+    if (!asset) return null;
+    const requestKey = `${asset.id}:${asset.signature}`;
+    const existing = this.thumbnailPromises.get(requestKey);
+    if (existing) return existing;
+    const pending = (async () => {
+      if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
+      const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
+      if (!existsSync(cachePath)) {
+        await this.withThumbnailSlot(async () => {
+          if (existsSync(cachePath)) return;
+          const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
+          try {
+            await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15_000 });
+            await rename(temporaryPath, cachePath);
+          } catch (error) {
+            await rm(temporaryPath, { force: true });
+            throw error;
+          }
+        });
+      }
+      return { data: await readFile(cachePath), contentType: "image/jpeg" as const };
+    })().finally(() => this.thumbnailPromises.delete(requestKey));
+    this.thumbnailPromises.set(requestKey, pending);
+    return pending;
+  }
+
+  async close() {
+    for (const watcher of this.watchers) watcher.close();
+    this.watchers = [];
+    if (this.reconcileTimer) clearInterval(this.reconcileTimer);
+    this.reconcileTimer = null;
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
+    this.watcherStatus = "stopped";
+  }
+}

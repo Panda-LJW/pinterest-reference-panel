@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="pinterest-panel-token" content="__PINTEREST_PANEL_TOKEN__">
+  <meta name="pinterest-reference-session" content="__PINTEREST_REFERENCE_SESSION__">
+  <title>Pinterest Inbox · 参考素材</title>
+  <link rel="stylesheet" href="/local-panel.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="panel-chrome">
+      <div class="title-row">
+        <div class="brand-lockup"><span class="brand-mark" aria-hidden="true">P</span><div><h1>Pinterest Inbox</h1><p class="eyebrow">你的灵感，随时可用</p></div></div>
+        <div class="toolbar">
+          <button id="refreshButton" class="icon-button" type="button" aria-label="立即刷新" title="立即刷新"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.35 5.65M20 4v7h-7"/></svg></button>
+          <details class="help-menu"><summary class="icon-button" aria-label="使用说明" title="使用说明">?</summary><div class="help-popover"><strong>从灵感到参考</strong><ol><li>点击图片放大查看。</li><li>用 ＋ 加入参考篮，按需调整顺序。</li><li>回到打开此面板的对话，说“使用选中的参考图”。</li></ol><p>也可复制路径，再按 <kbd>⌘V</kbd> 粘贴到对话。原素材保持不变。</p><p class="help-muted">参考篮在当前插件会话内保存。插件重启后，请重新选图。</p></div></details>
+        </div>
+      </div>
+      <div class="navigation-row"><nav class="tabs" aria-label="素材视图"><button id="pinsTab" class="tab is-active" type="button" aria-pressed="true">图片 <span>Pins</span></button><button id="boardsTab" class="tab" type="button" aria-pressed="false">图版 <span>Boards</span></button></nav><p id="watcherSummary" class="watcher-summary">连接中</p></div>
+      <div class="browse-tools" id="browseTools">
+        <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><label class="sr-only" for="searchInput">搜索素材</label><input id="searchInput" type="search" placeholder="搜索标题、图版或 Pin ID" maxlength="200" autocomplete="off"><button id="clearSearch" type="button" class="search-clear" aria-label="清除搜索" hidden>×</button></div>
+        <label class="sr-only" for="sortSelect">素材排序</label><select id="sortSelect" aria-label="素材排序"><option value="recent">最新优先</option><option value="oldest">最早优先</option><option value="title">按标题</option></select>
+      </div>
+    </header>
+    <section id="statusBanner" class="status-banner" role="status" hidden></section>
+    <div class="results-row"><p id="resultSummary" aria-live="polite">正在读取素材…</p><div id="boardFilter" class="board-filter" hidden></div></div>
+    <main id="content" class="content" aria-busy="true"><div class="skeleton-grid" aria-label="正在读取素材"><span></span><span></span><span></span><span></span></div></main>
+    <div class="load-more-wrap"><button id="loadMoreButton" class="button secondary load-more" type="button" hidden>继续加载</button><p id="listEnd" class="list-end" hidden>已显示全部素材</p></div>
+  </div>
+  <footer id="referenceTray" class="reference-tray" aria-label="当前任务参考篮">
+    <div class="tray-header"><div class="tray-label"><strong>参考篮</strong><span id="selectionCount" class="count-badge">0 / 10</span><span id="selectionStatus" class="selection-status" role="status"></span></div><div class="tray-actions"><button id="clearSelection" class="text-button" type="button" disabled>清空</button><button id="copySelection" class="button primary" type="button" disabled>复制路径</button></div></div>
+    <ol id="selectionList" class="selection-list" aria-label="参考图顺序" hidden></ol>
+    <p id="selectionHint" class="selection-hint">点击图片上的 ＋，组合你的下一组参考。</p>
+  </footer>
+  <dialog id="previewDialog" class="preview-dialog" aria-labelledby="previewTitle">
+    <div class="preview-header"><span id="previewPosition" class="eyebrow">原图预览</span><button id="closePreview" class="icon-button" type="button" aria-label="关闭预览" autofocus>×</button></div>
+    <div id="previewStage" class="preview-stage"><p id="previewMessage" role="status">正在读取原图…</p><img id="previewImage" alt="" hidden><button id="previousPreview" class="preview-nav previous" type="button" aria-label="上一张">‹</button><button id="nextPreview" class="preview-nav next" type="button" aria-label="下一张">›</button></div>
+    <div class="preview-footer"><div class="preview-info"><h2 id="previewTitle"></h2><p id="previewMeta"></p><p id="previewFeedback" role="status"></p></div><div class="preview-actions"><button id="previewCopy" class="button secondary" type="button">复制路径</button><button id="previewSelect" class="button primary" type="button">加入参考</button></div></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script type="module" src="/local-panel.js"></script>
+</body>
+</html>

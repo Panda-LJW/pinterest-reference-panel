@@ -405,11 +405,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants4) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants);
+          this.rhs = optimizeExpr(this.rhs, names, constants4);
         return this;
       }
       get names() {
@@ -426,10 +426,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants4) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants);
+        this.rhs = optimizeExpr(this.rhs, names, constants4);
         return this;
       }
       get names() {
@@ -490,8 +490,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants) {
-        this.code = optimizeExpr(this.code, names, constants);
+      optimizeNames(names, constants4) {
+        this.code = optimizeExpr(this.code, names, constants4);
         return this;
       }
       get names() {
@@ -520,12 +520,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants4) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants))
+          if (n.optimizeNames(names, constants4))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -578,12 +578,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants4) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        if (!(super.optimizeNames(names, constants) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants4);
+        if (!(super.optimizeNames(names, constants4) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants);
+        this.condition = optimizeExpr(this.condition, names, constants4);
         return this;
       }
       get names() {
@@ -606,10 +606,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants4) {
+        if (!super.optimizeNames(names, constants4))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants);
+        this.iteration = optimizeExpr(this.iteration, names, constants4);
         return this;
       }
       get names() {
@@ -645,10 +645,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants) {
-        if (!super.optimizeNames(names, constants))
+      optimizeNames(names, constants4) {
+        if (!super.optimizeNames(names, constants4))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants);
+        this.iterable = optimizeExpr(this.iterable, names, constants4);
         return this;
       }
       get names() {
@@ -690,11 +690,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants) {
+      optimizeNames(names, constants4) {
         var _a, _b;
-        super.optimizeNames(names, constants);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
+        super.optimizeNames(names, constants4);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants4);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants4);
         return this;
       }
       get names() {
@@ -995,7 +995,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants) {
+    function optimizeExpr(expr, names, constants4) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1010,14 +1010,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants[n.str];
+        const c = constants4[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants4[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -1056,10 +1056,10 @@ var require_util = __commonJS({
     var codegen_1 = require_codegen();
     var code_1 = require_code();
     function toHash(arr) {
-      const hash = {};
+      const hash2 = {};
       for (const item of arr)
-        hash[item] = true;
-      return hash;
+        hash2[item] = true;
+      return hash2;
     }
     exports.toHash = toHash;
     function alwaysValidSchema(it, schema) {
@@ -2979,7 +2979,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve3.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref];
         const { schemaId } = this.opts;
@@ -3006,7 +3006,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve3(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -3104,9 +3104,28 @@ var require_utils = __commonJS({
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
+    var isPort = RegExp.prototype.test.bind(/^\d*$/u);
     var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
     var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
-    var isPathCharacter = RegExp.prototype.test.bind(/^[\da-z\-._~!$&'()*+,;=:@/]$/iu);
+    var isPathCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/]$/u);
+    var isQueryFragmentCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/?]$/u);
+    var isUserinfoCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:]$/u);
+    var BYTE_HEX = new Array(256);
+    {
+      const HEX_DIGITS = "0123456789ABCDEF";
+      for (let i = 0; i < 256; i++) {
+        BYTE_HEX[i] = "%" + HEX_DIGITS[i >> 4] + HEX_DIGITS[i & 15];
+      }
+    }
+    function percentEncodeNonAscii(cp) {
+      if (cp < 2048) {
+        return BYTE_HEX[192 | cp >> 6] + BYTE_HEX[128 | cp & 63];
+      }
+      if (cp < 65536) {
+        return BYTE_HEX[224 | cp >> 12] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+      }
+      return BYTE_HEX[240 | cp >> 18] + BYTE_HEX[128 | cp >> 12 & 63] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+    }
     function stringArrayToHexStripped(input) {
       let acc = "";
       let code = 0;
@@ -3131,91 +3150,105 @@ var require_utils = __commonJS({
       }
       return acc;
     }
+    var isHextet = RegExp.prototype.test.bind(/^[\dA-Fa-f]{1,4}$/);
+    var isIPvFuture = RegExp.prototype.test.bind(/^[vV][\dA-Fa-f]+\.[A-Za-z\d\-._~!$&'()*+,;=:]+$/);
+    var isZoneCharacter = RegExp.prototype.test.bind(/^[A-Za-z\d\-._~]$/);
     var nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-    function consumeIsZone(buffer) {
-      buffer.length = 0;
-      return true;
-    }
-    function consumeHextets(buffer, address, output) {
-      if (buffer.length) {
-        const hex = stringArrayToHexStripped(buffer);
-        if (hex !== "") {
-          address.push(hex);
-        } else {
-          output.error = true;
-          return false;
+    function isZoneIdentifier(zone) {
+      if (zone.length === 0) return false;
+      for (let i = 0; i < zone.length; i++) {
+        if (isZoneCharacter(zone[i])) continue;
+        if (zone[i] === "%" && i + 2 < zone.length && isHexPair(zone.slice(i + 1, i + 3))) {
+          i += 2;
+          continue;
         }
-        buffer.length = 0;
+        return false;
       }
       return true;
     }
-    function getIPV6(input) {
-      let tokenCount = 0;
-      const output = { error: false, address: "", zone: "" };
-      const address = [];
-      const buffer = [];
-      let endipv6Encountered = false;
-      let endIpv6 = false;
-      let consume = consumeHextets;
-      for (let i = 0; i < input.length; i++) {
-        const cursor = input[i];
-        if (cursor === "[" || cursor === "]") {
-          continue;
-        }
-        if (cursor === ":") {
-          if (endipv6Encountered === true) {
-            endIpv6 = true;
+    function compressIPv6ZeroRun(hextets) {
+      let bestStart = -1;
+      let bestLength = 0;
+      let runStart = -1;
+      let runLength = 0;
+      for (let i = 0; i < hextets.length; i++) {
+        if (hextets[i] === "0") {
+          if (runStart === -1) runStart = i;
+          runLength++;
+          if (runLength > bestLength) {
+            bestLength = runLength;
+            bestStart = runStart;
           }
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          if (++tokenCount > 7) {
-            output.error = true;
-            break;
-          }
-          if (i > 0 && input[i - 1] === ":") {
-            endipv6Encountered = true;
-          }
-          address.push(":");
-          continue;
-        } else if (cursor === "%") {
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          consume = consumeIsZone;
         } else {
-          buffer.push(cursor);
-          continue;
+          runStart = -1;
+          runLength = 0;
         }
       }
-      if (buffer.length) {
-        if (consume === consumeIsZone) {
-          output.zone = buffer.join("");
-        } else if (endIpv6) {
-          address.push(buffer.join(""));
-        } else {
-          address.push(stringArrayToHexStripped(buffer));
-        }
+      if (bestLength < 2) return hextets.join(":");
+      const head = hextets.slice(0, bestStart).join(":");
+      const tail = hextets.slice(bestStart + bestLength).join(":");
+      return head + "::" + tail;
+    }
+    function normalizeIPv6Address(input) {
+      const compression = input.indexOf("::");
+      if (compression !== -1 && input.indexOf("::", compression + 1) !== -1) return void 0;
+      const left = compression === -1 ? input.split(":") : input.slice(0, compression).split(":");
+      const right = compression === -1 ? [] : input.slice(compression + 2).split(":");
+      if (compression !== -1) {
+        if (left.length === 1 && left[0] === "") left.length = 0;
+        if (right.length === 1 && right[0] === "") right.length = 0;
       }
-      output.address = address.join("");
-      return output;
+      const parts = left.concat(right);
+      let hextetCount = 0;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part === "") return void 0;
+        if (part.indexOf(".") !== -1) {
+          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
+          hextetCount += 2;
+          continue;
+        }
+        if (!isHextet(part)) return void 0;
+        parts[i] = parseInt(part, 16).toString(16);
+        hextetCount++;
+      }
+      if (compression === -1) {
+        if (hextetCount !== 8) return void 0;
+        return compressIPv6ZeroRun(parts);
+      }
+      if (hextetCount >= 8) return void 0;
+      const expanded = parts.slice(0, left.length);
+      for (let i = hextetCount; i < 8; i++) expanded.push("0");
+      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
+      return compressIPv6ZeroRun(expanded);
     }
     function normalizeIPv6(host) {
-      if (findToken(host, ":") < 2) {
-        return { host, isIPV6: false };
+      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
+      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
+      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
+      let input = bracketed ? host.slice(1, -1) : host;
+      if (bracketed && isIPvFuture(input)) {
+        input = input.toLowerCase();
+        return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
       }
-      const ipv62 = getIPV6(host);
-      if (!ipv62.error) {
-        let newHost = ipv62.address;
-        let escapedHost = ipv62.address;
-        if (ipv62.zone) {
-          newHost += "%" + ipv62.zone;
-          escapedHost += "%25" + ipv62.zone;
-        }
-        return { host: newHost, isIPV6: true, escapedHost };
-      } else {
-        return { host, isIPV6: false };
+      if (findToken(input, ":") < 2) {
+        return { host, isIPV6: false, error: bracketed };
       }
+      let zoneIdentifier = "";
+      const zoneSeparator = input.indexOf("%");
+      if (zoneSeparator !== -1) {
+        const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
+        zoneIdentifier = input.slice(zoneSeparator + separatorLength);
+        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
+        input = input.slice(0, zoneSeparator);
+      }
+      const address = normalizeIPv6Address(input);
+      if (address === void 0) return { host, isIPV6: false, error: true };
+      return {
+        host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
+        escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
+        isIPV6: true
+      };
     }
     function findToken(str, token) {
       let ind = 0;
@@ -3334,7 +3367,8 @@ var require_utils = __commonJS({
     function normalizePathEncoding(input) {
       let output = "";
       for (let i = 0; i < input.length; i++) {
-        if (input[i] === "%" && i + 2 < input.length) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
           const hex = input.slice(i + 1, i + 3);
           if (isHexPair(hex)) {
             const normalizedHex = hex.toUpperCase();
@@ -3348,10 +3382,152 @@ var require_utils = __commonJS({
             continue;
           }
         }
-        if (isPathCharacter(input[i])) {
-          output += input[i];
+        if (isPathCharacter(ch)) {
+          output += ch;
         } else {
-          output += escape(input[i]);
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function serializePathEncoding(input, pathNoScheme = false) {
+      let output = "";
+      let firstSegment = pathNoScheme && input[0] !== "/";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (ch === "/") {
+          firstSegment = false;
+        }
+        if (isPathCharacter(ch) && (ch !== ":" || !firstSegment)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeComponent(input, isAllowed) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (isAllowed(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeUserinfo(input) {
+      return encodeComponent(input, isUserinfoCharacter);
+    }
+    function encodeQuery(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function encodeFragment(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function isEscapeSafe(cp) {
+      return cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122 || cp === 42 || cp === 43 || cp === 45 || cp === 46 || cp === 47 || cp === 64 || cp === 95;
+    }
+    function normalizeQueryFragmentEncoding(input) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            const normalizedHex = hex.toUpperCase();
+            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
+            if (isUnreserved(decoded)) {
+              output += decoded;
+            } else {
+              output += "%" + normalizedHex;
+            }
+            i += 2;
+            continue;
+          }
+        }
+        if (isQueryFragmentCharacter(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
         }
       }
       return output;
@@ -3374,14 +3550,18 @@ var require_utils = __commonJS({
     function recomposeAuthority(component) {
       const uriTokens = [];
       if (component.userinfo !== void 0) {
-        uriTokens.push(component.userinfo);
+        uriTokens.push(encodeUserinfo(component.userinfo));
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = unescape(component.host);
+        let host = component.host;
         if (!isIPv4(host)) {
-          const ipV6res = normalizeIPv6(host);
-          if (ipV6res.isIPV6 === true) {
+          let ipV6res = normalizeIPv6(host);
+          if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
+            host = normalizePercentEncoding(host, true);
+            ipV6res = normalizeIPv6(host);
+          }
+          if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
             host = `[${ipV6res.escapedHost}]`;
           } else {
             host = reescapeHostDelimiters(host, false);
@@ -3390,8 +3570,12 @@ var require_utils = __commonJS({
         uriTokens.push(host);
       }
       if (typeof component.port === "number" || typeof component.port === "string") {
+        const port = String(component.port);
+        if (!isPort(port)) {
+          throw new TypeError("URI port is malformed.");
+        }
         uriTokens.push(":");
-        uriTokens.push(String(component.port));
+        uriTokens.push(port);
       }
       return uriTokens.length ? uriTokens.join("") : void 0;
     }
@@ -3401,6 +3585,11 @@ var require_utils = __commonJS({
       reescapeHostDelimiters,
       normalizePercentEncoding,
       normalizePathEncoding,
+      serializePathEncoding,
+      normalizeQueryFragmentEncoding,
+      encodeUserinfo,
+      encodeQuery,
+      encodeFragment,
       escapePreservingEscapes,
       removeDotSegments,
       isIPv4,
@@ -3416,7 +3605,7 @@ var require_schemes = __commonJS({
   "../../node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
-    var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
+    var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
     var supportedSchemeNames = (
       /** @type {const} */
       [
@@ -3477,9 +3666,10 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path, query] = wsComponent.resourceName.split("?");
+        const queryIndex = wsComponent.resourceName.indexOf("?");
+        const path = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
         wsComponent.path = path && path !== "/" ? path : void 0;
-        wsComponent.query = query;
+        wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
       wsComponent.fragment = void 0;
@@ -3491,7 +3681,7 @@ var require_schemes = __commonJS({
         return urnComponent;
       }
       const matches = urnComponent.path.match(URN_REG);
-      if (matches) {
+      if (matches && matches[0] === urnComponent.path) {
         const scheme = options.scheme || urnComponent.scheme || "urn";
         urnComponent.nid = matches[1].toLowerCase();
         urnComponent.nss = matches[2];
@@ -3625,8 +3815,17 @@ var require_schemes = __commonJS({
 var require_fast_uri = __commonJS({
   "../../node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
+    var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
+    var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
+    function decodeValidScheme(scheme) {
+      const decodedScheme = unescape(String(scheme));
+      if (!VALID_SCHEME.test(decodedScheme)) {
+        throw new TypeError(MALFORMED_SCHEME_ERROR);
+      }
+      return decodedScheme;
+    }
     function normalize(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
@@ -3637,60 +3836,82 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve3(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
-      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed) {
+      const {
+        parsed: baseParsed,
+        malformedAuthorityOrPort: baseMalformed,
+        malformedPercentEncoding: baseMalformedPercentEncoding,
+        malformedSchemeSpecific: baseMalformedSchemeSpecific,
+        malformedHost: baseMalformedHost,
+        malformedScheme: baseMalformedScheme
+      } = parseWithStatus(baseURI, schemelessOptions);
+      const {
+        parsed: relativeParsed,
+        malformedAuthorityOrPort: relativeMalformed,
+        malformedPercentEncoding: relativeMalformedPercentEncoding,
+        malformedSchemeSpecific: relativeMalformedSchemeSpecific,
+        malformedHost: relativeMalformedHost,
+        malformedScheme: relativeMalformedScheme
+      } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed || baseMalformedPercentEncoding || relativeMalformedPercentEncoding || baseMalformedSchemeSpecific || relativeMalformedSchemeSpecific || baseMalformedHost || relativeMalformedHost || baseMalformedScheme || relativeMalformedScheme) {
         throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
       }
       const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
+      const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
+      const resolvedHost = resolved.host;
+      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
+      canonicalizeHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP);
+      const encodedASCIIHost = resolvedHost && resolvedHost.indexOf("%") !== -1 && !new RegExp("\\P{ASCII}", "u").test(resolvedHost);
+      if (resolved.error && !encodedASCIIHost) {
+        throw new Error(resolved.error);
+      }
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative3, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        relative3 = parse3(serialize(relative3, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative3.scheme) {
+        target.scheme = relative3.scheme;
+        target.userinfo = relative3.userinfo;
+        target.host = relative3.host;
+        target.port = relative3.port;
+        target.path = removeDotSegments(relative3.path || "");
+        target.query = relative3.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative3.userinfo !== void 0 || relative3.host !== void 0 || relative3.port !== void 0) {
+          target.userinfo = relative3.userinfo;
+          target.host = relative3.host;
+          target.port = relative3.port;
+          target.path = removeDotSegments(relative3.path || "");
+          target.query = relative3.query;
         } else {
-          if (!relative.path) {
+          if (!relative3.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative3.query !== void 0) {
+              target.query = relative3.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative3.path[0] === "/") {
+              target.path = removeDotSegments(relative3.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative3.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative3.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative3.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative3.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -3698,13 +3919,13 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative3.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
       const normalizedA = normalizeComparableURI(uriA, options);
       const normalizedB = normalizeComparableURI(uriB, options);
-      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA.toLowerCase() === normalizedB.toLowerCase();
+      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
     }
     function serialize(cmpts, opts) {
       const component = {
@@ -3725,19 +3946,22 @@ var require_fast_uri = __commonJS({
       };
       const options = Object.assign({}, opts);
       const uriTokens = [];
+      if (component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
+      }
       const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
       if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
+      const hasAuthority = component.userinfo !== void 0 || component.host !== void 0 || component.port !== void 0;
+      const pathNoScheme = !options.skipEscape && component.scheme === void 0 && !hasAuthority;
       if (component.path !== void 0) {
         if (!options.skipEscape) {
-          component.path = escapePreservingEscapes(component.path);
-          if (component.scheme !== void 0) {
-            component.path = component.path.split("%3A").join(":");
-          }
+          component.path = serializePathEncoding(component.path, pathNoScheme);
         } else {
           component.path = normalizePercentEncoding(component.path);
         }
       }
       if (options.reference !== "suffix" && component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
         uriTokens.push(component.scheme, ":");
       }
       const authority = recomposeAuthority(component);
@@ -3755,16 +3979,19 @@ var require_fast_uri = __commonJS({
         if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
           s = removeDotSegments(s);
         }
+        if (pathNoScheme) {
+          s = serializePathEncoding(s, true);
+        }
         if (authority === void 0 && s[0] === "/" && s[1] === "/") {
           s = "/%2F" + s.slice(2);
         }
         uriTokens.push(s);
       }
       if (component.query !== void 0) {
-        uriTokens.push("?", component.query);
+        uriTokens.push("?", encodeQuery(component.query));
       }
       if (component.fragment !== void 0) {
-        uriTokens.push("#", component.fragment);
+        uriTokens.push("#", encodeFragment(component.fragment));
       }
       return uriTokens.join("");
     }
@@ -3780,6 +4007,35 @@ var require_fast_uri = __commonJS({
       }
       return void 0;
     }
+    function hasMalformedPercentEncoding(component) {
+      if (component === void 0) return false;
+      let percent = component.indexOf("%");
+      while (percent !== -1) {
+        if (percent + 2 >= component.length || !/^[\da-f]{2}$/iu.test(component.slice(percent + 1, percent + 3))) {
+          return true;
+        }
+        percent = component.indexOf("%", percent + 3);
+      }
+      return false;
+    }
+    function isIPLiteral(host) {
+      return host[0] === "[" && host[host.length - 1] === "]";
+    }
+    function hasMalformedComponentPercentEncoding(matches) {
+      const host = matches[4];
+      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !isIPLiteral(host) && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
+    }
+    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
+      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+        try {
+          parsed.host = new URL("http://" + parsed.host).hostname;
+        } catch (e) {
+          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
+          return true;
+        }
+      }
+      return false;
+    }
     function parseWithStatus(uri, opts) {
       const options = Object.assign({}, opts);
       const parsed = {
@@ -3792,6 +4048,11 @@ var require_fast_uri = __commonJS({
         fragment: void 0
       };
       let malformedAuthorityOrPort = false;
+      let malformedPercentEncoding = false;
+      let malformedSchemeSpecific = false;
+      let malformedHost = false;
+      let malformedIPLiteral = false;
+      let malformedScheme = false;
       let isIP = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
@@ -3828,6 +4089,19 @@ var require_fast_uri = __commonJS({
         parsed.path = matches[6] || "";
         parsed.query = matches[7];
         parsed.fragment = matches[8];
+        if (parsed.scheme !== void 0) {
+          const decodedScheme = unescape(parsed.scheme);
+          if (VALID_SCHEME.test(decodedScheme)) {
+            parsed.scheme = decodedScheme.toLowerCase();
+          } else {
+            parsed.error = parsed.error || MALFORMED_SCHEME_ERROR;
+            malformedScheme = true;
+          }
+        }
+        malformedPercentEncoding = hasMalformedComponentPercentEncoding(matches);
+        if (malformedPercentEncoding) {
+          parsed.error = parsed.error || "URI contains malformed percent-encoding.";
+        }
         if (isNaN(parsed.port)) {
           parsed.port = matches[5];
         }
@@ -3839,9 +4113,16 @@ var require_fast_uri = __commonJS({
         if (parsed.host) {
           const ipv4result = isIPv4(parsed.host);
           if (ipv4result === false) {
+            const bracketedIPLiteral = isIPLiteral(parsed.host);
+            const hasIPLiteralBracket = parsed.host.indexOf("[") !== -1 || parsed.host.indexOf("]") !== -1;
             const ipv6result = normalizeIPv6(parsed.host);
-            parsed.host = ipv6result.host.toLowerCase();
-            isIP = ipv6result.isIPV6;
+            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
+            malformedIPLiteral = hasIPLiteralBracket && (!bracketedIPLiteral || ipv6result.error === true);
+            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
+            if (malformedIPLiteral) {
+              parsed.error = parsed.error || "URI host is malformed.";
+              malformedAuthorityOrPort = true;
+            }
           } else {
             isIP = true;
           }
@@ -3859,42 +4140,36 @@ var require_fast_uri = __commonJS({
           parsed.error = parsed.error || "URI is not a " + options.reference + " reference.";
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
-          if (parsed.host && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
-            try {
-              parsed.host = new URL("http://" + parsed.host).hostname;
-            } catch (e) {
-              parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-            }
-          }
+        if (!malformedIPLiteral) {
+          malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
         }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (uri.indexOf("%") !== -1) {
-            if (parsed.scheme !== void 0) {
-              parsed.scheme = unescape(parsed.scheme);
-            }
-            if (parsed.host !== void 0) {
-              parsed.host = reescapeHostDelimiters(unescape(parsed.host), isIP);
+            if (parsed.host !== void 0 && !malformedIPLiteral) {
+              const host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
+              parsed.host = reescapeHostDelimiters(host, isIP);
             }
           }
           if (parsed.path) {
             parsed.path = normalizePathEncoding(parsed.path);
           }
+          if (parsed.query) {
+            parsed.query = normalizeQueryFragmentEncoding(parsed.query);
+          }
           if (parsed.fragment) {
-            try {
-              parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
-            } catch {
-              parsed.error = parsed.error || "URI malformed";
-            }
+            parsed.fragment = normalizeQueryFragmentEncoding(parsed.fragment);
           }
         }
         if (schemeHandler && schemeHandler.parse) {
           schemeHandler.parse(parsed, options);
+          if (schemeHandler === SCHEMES.urn && parsed.nid === void 0) {
+            malformedSchemeSpecific = true;
+          }
         }
       } else {
         parsed.error = parsed.error || "URI can not be parsed.";
       }
-      return { parsed, malformedAuthorityOrPort };
+      return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
     function parse3(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
@@ -3903,25 +4178,33 @@ var require_fast_uri = __commonJS({
       return normalizeStringWithStatus(uri, opts).normalized;
     }
     function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort } = parseWithStatus(uri, opts);
+      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
       return {
-        normalized: malformedAuthorityOrPort ? uri : serialize(parsed, opts),
-        malformedAuthorityOrPort
+        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
+        malformedAuthorityOrPort,
+        malformedPercentEncoding,
+        malformedSchemeSpecific,
+        malformedHost,
+        malformedScheme
       };
     }
     function normalizeComparableURI(uri, opts) {
-      if (typeof uri === "string") {
-        const { normalized, malformedAuthorityOrPort } = normalizeStringWithStatus(uri, opts);
-        return malformedAuthorityOrPort ? void 0 : normalized;
+      if (typeof uri !== "string" && typeof uri !== "object") {
+        return void 0;
       }
-      if (typeof uri === "object") {
-        return serialize(uri, opts);
+      let value;
+      try {
+        value = typeof uri === "string" ? uri : serialize(uri, opts);
+      } catch {
+        return void 0;
       }
+      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
+      return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
     }
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve3,
       resolveComponent,
       equal,
       serialize,
@@ -6912,8 +7195,120 @@ var require_dist = __commonJS({
 
 // src/server.ts
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+import { dirname as dirname4, join as join4 } from "node:path";
+
+// ../../node_modules/zod/v3/external.js
+var external_exports = {};
+__export(external_exports, {
+  BRAND: () => BRAND,
+  DIRTY: () => DIRTY,
+  EMPTY_PATH: () => EMPTY_PATH,
+  INVALID: () => INVALID,
+  NEVER: () => NEVER,
+  OK: () => OK,
+  ParseStatus: () => ParseStatus,
+  Schema: () => ZodType,
+  ZodAny: () => ZodAny,
+  ZodArray: () => ZodArray,
+  ZodBigInt: () => ZodBigInt,
+  ZodBoolean: () => ZodBoolean,
+  ZodBranded: () => ZodBranded,
+  ZodCatch: () => ZodCatch,
+  ZodDate: () => ZodDate,
+  ZodDefault: () => ZodDefault,
+  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
+  ZodEffects: () => ZodEffects,
+  ZodEnum: () => ZodEnum,
+  ZodError: () => ZodError,
+  ZodFirstPartyTypeKind: () => ZodFirstPartyTypeKind,
+  ZodFunction: () => ZodFunction,
+  ZodIntersection: () => ZodIntersection,
+  ZodIssueCode: () => ZodIssueCode,
+  ZodLazy: () => ZodLazy,
+  ZodLiteral: () => ZodLiteral,
+  ZodMap: () => ZodMap,
+  ZodNaN: () => ZodNaN,
+  ZodNativeEnum: () => ZodNativeEnum,
+  ZodNever: () => ZodNever,
+  ZodNull: () => ZodNull,
+  ZodNullable: () => ZodNullable,
+  ZodNumber: () => ZodNumber,
+  ZodObject: () => ZodObject,
+  ZodOptional: () => ZodOptional,
+  ZodParsedType: () => ZodParsedType,
+  ZodPipeline: () => ZodPipeline,
+  ZodPromise: () => ZodPromise,
+  ZodReadonly: () => ZodReadonly,
+  ZodRecord: () => ZodRecord,
+  ZodSchema: () => ZodType,
+  ZodSet: () => ZodSet,
+  ZodString: () => ZodString,
+  ZodSymbol: () => ZodSymbol,
+  ZodTransformer: () => ZodEffects,
+  ZodTuple: () => ZodTuple,
+  ZodType: () => ZodType,
+  ZodUndefined: () => ZodUndefined,
+  ZodUnion: () => ZodUnion,
+  ZodUnknown: () => ZodUnknown,
+  ZodVoid: () => ZodVoid,
+  addIssueToContext: () => addIssueToContext,
+  any: () => anyType,
+  array: () => arrayType,
+  bigint: () => bigIntType,
+  boolean: () => booleanType,
+  coerce: () => coerce,
+  custom: () => custom,
+  date: () => dateType,
+  datetimeRegex: () => datetimeRegex,
+  defaultErrorMap: () => en_default,
+  discriminatedUnion: () => discriminatedUnionType,
+  effect: () => effectsType,
+  enum: () => enumType,
+  function: () => functionType,
+  getErrorMap: () => getErrorMap,
+  getParsedType: () => getParsedType,
+  instanceof: () => instanceOfType,
+  intersection: () => intersectionType,
+  isAborted: () => isAborted,
+  isAsync: () => isAsync,
+  isDirty: () => isDirty,
+  isValid: () => isValid,
+  late: () => late,
+  lazy: () => lazyType,
+  literal: () => literalType,
+  makeIssue: () => makeIssue,
+  map: () => mapType,
+  nan: () => nanType,
+  nativeEnum: () => nativeEnumType,
+  never: () => neverType,
+  null: () => nullType,
+  nullable: () => nullableType,
+  number: () => numberType,
+  object: () => objectType,
+  objectUtil: () => objectUtil,
+  oboolean: () => oboolean,
+  onumber: () => onumber,
+  optional: () => optionalType,
+  ostring: () => ostring,
+  pipeline: () => pipelineType,
+  preprocess: () => preprocessType,
+  promise: () => promiseType,
+  quotelessJson: () => quotelessJson,
+  record: () => recordType,
+  set: () => setType,
+  setErrorMap: () => setErrorMap,
+  strictObject: () => strictObjectType,
+  string: () => stringType,
+  symbol: () => symbolType,
+  transformer: () => effectsType,
+  tuple: () => tupleType,
+  undefined: () => undefinedType,
+  union: () => unionType,
+  unknown: () => unknownType,
+  util: () => util,
+  void: () => voidType
+});
 
 // ../../node_modules/zod/v3/helpers/util.js
 var util;
@@ -7068,6 +7463,10 @@ var ZodIssueCode = util.arrayToEnum([
   "not_multiple_of",
   "not_finite"
 ]);
+var quotelessJson = (obj) => {
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(/"([^"]+)":/g, "$1:");
+};
 var ZodError = class _ZodError extends Error {
   get errors() {
     return this.issues;
@@ -7268,6 +7667,9 @@ var en_default = errorMap;
 
 // ../../node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
+function setErrorMap(map) {
+  overrideErrorMap = map;
+}
 function getErrorMap() {
   return overrideErrorMap;
 }
@@ -7298,6 +7700,7 @@ var makeIssue = (params) => {
     message: errorMessage
   };
 };
+var EMPTY_PATH = [];
 function addIssueToContext(ctx, issueData) {
   const overrideMap = getErrorMap();
   const issue2 = makeIssue({
@@ -10715,6 +11118,33 @@ ZodReadonly.create = (type, params) => {
     ...processCreateParams(params)
   });
 };
+function cleanParams(params, data) {
+  const p = typeof params === "function" ? params(data) : typeof params === "string" ? { message: params } : params;
+  const p2 = typeof p === "string" ? { message: p } : p;
+  return p2;
+}
+function custom(check2, _params = {}, fatal) {
+  if (check2)
+    return ZodAny.create().superRefine((data, ctx) => {
+      const r = check2(data);
+      if (r instanceof Promise) {
+        return r.then((r2) => {
+          if (!r2) {
+            const params = cleanParams(_params, data);
+            const _fatal = params.fatal ?? fatal ?? true;
+            ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+          }
+        });
+      }
+      if (!r) {
+        const params = cleanParams(_params, data);
+        const _fatal = params.fatal ?? fatal ?? true;
+        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+      }
+      return;
+    });
+  return ZodAny.create();
+}
 var late = {
   object: ZodObject.lazycreate
 };
@@ -10757,6 +11187,9 @@ var ZodFirstPartyTypeKind;
   ZodFirstPartyTypeKind2["ZodPipeline"] = "ZodPipeline";
   ZodFirstPartyTypeKind2["ZodReadonly"] = "ZodReadonly";
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
+var instanceOfType = (cls, params = {
+  message: `Input not instance of ${cls.name}`
+}) => custom((data) => data instanceof cls, params);
 var stringType = ZodString.create;
 var numberType = ZodNumber.create;
 var nanType = ZodNaN.create;
@@ -10791,9 +11224,23 @@ var optionalType = ZodOptional.create;
 var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
+var ostring = () => stringType().optional();
+var onumber = () => numberType().optional();
+var oboolean = () => booleanType().optional();
+var coerce = {
+  string: ((arg) => ZodString.create({ ...arg, coerce: true })),
+  number: ((arg) => ZodNumber.create({ ...arg, coerce: true })),
+  boolean: ((arg) => ZodBoolean.create({
+    ...arg,
+    coerce: true
+  })),
+  bigint: ((arg) => ZodBigInt.create({ ...arg, coerce: true })),
+  date: ((arg) => ZodDate.create({ ...arg, coerce: true }))
+};
+var NEVER = INVALID;
 
 // ../../node_modules/zod/v4/core/core.js
-var NEVER = Object.freeze({
+var NEVER2 = Object.freeze({
   status: "aborted"
 });
 // @__NO_SIDE_EFFECTS__
@@ -15466,7 +15913,7 @@ function check(fn) {
   ch._zod.check = fn;
   return ch;
 }
-function custom(fn, _params) {
+function custom2(fn, _params) {
   return _custom(ZodCustom, fn ?? (() => true), _params);
 }
 function refine(fn, _params = {}) {
@@ -15504,7 +15951,7 @@ var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
 var JSONRPC_VERSION = "2.0";
-var AssertObjectSchema = custom((v) => v !== null && (typeof v === "object" || typeof v === "function"));
+var AssertObjectSchema = custom2((v) => v !== null && (typeof v === "object" || typeof v === "function"));
 var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
@@ -18861,7 +19308,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error2) {
@@ -18878,7 +19325,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve3, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -18956,7 +19403,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve3(parseResult.data);
           }
         } catch (error2) {
           reject(error2);
@@ -19217,12 +19664,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve3, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve3, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -20313,7 +20760,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await new Promise((resolve3) => setTimeout(resolve3, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -20977,205 +21424,1444 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve3) => {
       const json = serializeMessage(message);
       if (this._stdout.write(json)) {
-        resolve();
+        resolve3();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve3);
       }
     });
   }
 };
 
-// src/data.ts
-var boards = [
-  { id: "characters", title: "\u89D2\u8272\u4E0E\u59FF\u6001", description: "\u4EBA\u7269\u8F6E\u5ED3\u3001\u52A8\u4F5C\u548C\u670D\u88C5\u53C2\u8003" },
-  { id: "editorial", title: "\u7F16\u8F91\u8BBE\u8BA1", description: "\u6742\u5FD7\u5C01\u9762\u3001\u5B57\u4F53\u548C\u7248\u5F0F\u8282\u594F" },
-  { id: "color", title: "\u8272\u5F69\u4E0E\u5149", description: "\u5927\u80C6\u914D\u8272\u4E0E\u7535\u5F71\u611F\u7167\u660E" },
-  { id: "creatures", title: "\u602A\u517D\u6D82\u9E26", description: "\u73A9\u5177\u611F\u751F\u7269\u548C\u7C97\u7C9D\u7B14\u89E6" }
-];
-var pins = [
-  {
-    id: "pin-dino-blue",
-    boardId: "creatures",
-    title: "\u84DD\u8272\u66B4\u9F99\u6D82\u9E26",
-    note: "\u7C97\u7EBF\u6761\u3001\u73A9\u5177\u611F\u6BD4\u4F8B\u3001\u660E\u4EAE\u5E95\u8272",
-    aspect: 0.74,
-    art: "dino",
-    palette: ["#0B9BCE", "#F5D547", "#111111"]
-  },
-  {
-    id: "pin-ember-friend",
-    boardId: "color",
-    title: "\u706B\u7130\u4F19\u4F34",
-    note: "\u6DF1\u8272\u7A7A\u95F4\u91CC\u7684\u6696\u8272\u53D1\u5149\u89D2\u8272",
-    aspect: 0.82,
-    art: "ember",
-    palette: ["#0B0606", "#F45D22", "#FFB320"]
-  },
-  {
-    id: "pin-neon-portrait",
-    boardId: "characters",
-    title: "\u9713\u8679\u89D2\u8272\u8096\u50CF",
-    note: "\u9178\u6027\u7EFF\u4E0E\u7D2B\u8272\u7684\u89D2\u8272\u914D\u8272",
-    aspect: 0.78,
-    art: "portrait",
-    palette: ["#FF7A3D", "#B9FF30", "#9C5BFF"]
-  },
-  {
-    id: "pin-red-dress",
-    boardId: "characters",
-    title: "\u7EA2\u8272\u793C\u670D\u80CC\u5F71",
-    note: "\u4F4E\u8C03\u9ED1\u573A\u4E0E\u7EA2\u8272\u8F6E\u5ED3\u5149",
-    aspect: 0.66,
-    art: "ink",
-    palette: ["#080606", "#7A0B19", "#E72C3B"]
-  },
-  {
-    id: "pin-pool-editorial",
-    boardId: "editorial",
-    title: "\u6CF3\u6C60\u7F16\u8F91\u5C01\u9762",
-    note: "\u6C34\u5149\u3001\u7559\u767D\u4E0E\u7A84\u4F53\u6807\u9898",
-    aspect: 0.72,
-    art: "pool",
-    palette: ["#80DAE8", "#F76D8C", "#F5EEE7"]
-  },
-  {
-    id: "pin-flora-study",
-    boardId: "color",
-    title: "\u70ED\u5E26\u690D\u7269\u8272\u7A3F",
-    note: "\u73CA\u745A\u7EA2\u3001\u53F6\u7EFF\u4E0E\u7EB8\u5F20\u9897\u7C92",
-    aspect: 0.9,
-    art: "flora",
-    palette: ["#F6634D", "#155F47", "#F5D9A7"]
-  },
-  {
-    id: "pin-orbit-type",
-    boardId: "editorial",
-    title: "\u8F68\u9053\u5B57\u4F53\u5B9E\u9A8C",
-    note: "\u9ED1\u767D\u7ED3\u6784\u4E0E\u5355\u70B9\u4EAE\u7EA2",
-    aspect: 0.68,
-    art: "orbit",
-    palette: ["#EEECE7", "#171717", "#E60023"]
-  },
-  {
-    id: "pin-signal-poster",
-    boardId: "editorial",
-    title: "\u4FE1\u53F7\u6D77\u62A5",
-    note: "\u626B\u63CF\u7EBF\u3001\u6696\u68D5\u8272\u4E0E\u53E0\u5370\u4EBA\u5F71",
-    aspect: 0.75,
-    art: "poster",
-    palette: ["#6D2C16", "#E9A64C", "#25130E"]
+// src/inbox.ts
+import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { createReadStream, existsSync, watch } from "node:fs";
+import { constants } from "node:fs";
+import { copyFile, link, lstat, mkdir, readFile, readdir, realpath, rename, rm, stat } from "node:fs/promises";
+import { homedir } from "node:os";
+import { basename, dirname, extname, join, relative, resolve, sep } from "node:path";
+import { promisify } from "node:util";
+var execFileAsync = promisify(execFile);
+var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".avif", ".gif", ".jpeg", ".jpg", ".png", ".webp"]);
+var RECONCILE_INTERVAL_MS = 1e4;
+var WATCH_DEBOUNCE_MS = 250;
+function hash(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function normalizeRelativePath(value) {
+  return value.split(sep).join("/");
+}
+function isWithin(root, candidate) {
+  const pathFromRoot = relative(root, candidate);
+  return pathFromRoot === "" || !pathFromRoot.startsWith(`..${sep}`) && pathFromRoot !== "..";
+}
+function humanizeSlug(value) {
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  })();
+  return decoded.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim() || "Unsorted";
+}
+function parseInboxFilename(fileName) {
+  const extension = extname(fileName).toLowerCase();
+  const stem = basename(fileName, extension);
+  const titleFirstMatch = stem.match(/^(.+)__pin-([a-zA-Z0-9-]+)$/);
+  if (titleFirstMatch) {
+    return {
+      pinId: titleFirstMatch[2] ?? stem,
+      title: humanizeSlug(titleFirstMatch[1] ?? stem),
+      extension
+    };
   }
-];
-function getMockPanelData() {
+  const legacyMatch = stem.match(/^([a-zA-Z0-9-]+)__(.+)$/);
+  if (!legacyMatch) return { pinId: stem, title: humanizeSlug(stem), extension };
   return {
-    mode: "demo",
-    refreshedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    boards: boards.map((board) => ({
-      ...board,
-      pinCount: pins.filter((pin) => pin.boardId === board.id).length
-    })),
-    pins
+    pinId: legacyMatch[1] ?? stem,
+    title: humanizeSlug(legacyMatch[2] ?? stem),
+    extension
+  };
+}
+async function walkImages(root, directory = root) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) continue;
+    const absolutePath = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      paths.push(...await walkImages(root, absolutePath));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const lowerName = entry.name.toLowerCase();
+    if (lowerName.endsWith(".crdownload") || lowerName.endsWith(".tmp")) continue;
+    if (!IMAGE_EXTENSIONS.has(extname(lowerName))) continue;
+    paths.push(absolutePath);
+  }
+  return paths;
+}
+async function hashFile(filePath) {
+  return new Promise((resolveHash, rejectHash) => {
+    const digest = createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => digest.update(chunk));
+    stream.once("error", rejectHash);
+    stream.once("end", () => resolveHash(digest.digest("hex")));
+  });
+}
+async function isStableFile(filePath) {
+  const initial = await stat(filePath);
+  if (!initial.isFile()) return false;
+  if (Date.now() - initial.mtimeMs > 1e3) return true;
+  await new Promise((resolveWait) => setTimeout(resolveWait, 300));
+  const settled = await stat(filePath);
+  return settled.isFile() && initial.size === settled.size && initial.mtimeMs === settled.mtimeMs;
+}
+async function mapWithConcurrency(values, concurrency, mapper) {
+  const results = new Array(values.length);
+  let nextIndex = 0;
+  async function worker() {
+    while (nextIndex < values.length) {
+      const index = nextIndex++;
+      const value = values[index];
+      if (value !== void 0) results[index] = await mapper(value);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker));
+  return results;
+}
+var InboxService = class {
+  inboxRoot;
+  stagingRoot;
+  cacheRoot;
+  reconcileIntervalMs;
+  assets = /* @__PURE__ */ new Map();
+  version = 0;
+  watchers = [];
+  reconcileTimer = null;
+  debounceTimer = null;
+  scanPromise = null;
+  reconcilePromise = null;
+  thumbnailPromises = /* @__PURE__ */ new Map();
+  thumbnailActive = 0;
+  thumbnailWaiters = [];
+  reconcileQueued = false;
+  watcherStatus = "stopped";
+  transfer = {
+    moved: 0,
+    deduplicated: 0,
+    renamed: 0,
+    failed: 0,
+    pending: 0,
+    lastRunAt: null,
+    lastError: null
+  };
+  refreshedAt = (/* @__PURE__ */ new Date(0)).toISOString();
+  constructor(options = {}) {
+    const configuredInbox = options.inboxRoot ?? process.env.PINTEREST_INBOX_DIR;
+    this.inboxRoot = resolve(configuredInbox ?? join(homedir(), "Pictures", "PinterestInbox"));
+    this.stagingRoot = resolve(options.stagingRoot ?? process.env.PINTEREST_INBOX_STAGING_DIR ?? (configuredInbox ? this.inboxRoot : join(homedir(), "Downloads", "PinterestInbox")));
+    this.cacheRoot = resolve(options.cacheRoot ?? join(homedir(), "Library", "Caches", "pinterest-reference-panel", "thumbnails"));
+    this.reconcileIntervalMs = options.reconcileIntervalMs ?? RECONCILE_INTERVAL_MS;
+  }
+  async start() {
+    if (this.watcherStatus !== "stopped") return;
+    this.watcherStatus = "starting";
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    await mkdir(this.cacheRoot, { recursive: true });
+    await this.reconcile();
+    this.startWatchers();
+    this.reconcileTimer = setInterval(() => {
+      void this.reconcile().catch(() => {
+        this.watcherStatus = "degraded";
+      });
+    }, this.reconcileIntervalMs);
+    this.reconcileTimer.unref();
+  }
+  startWatchers() {
+    let degraded = false;
+    for (const root of /* @__PURE__ */ new Set([this.inboxRoot, this.stagingRoot])) {
+      try {
+        const watcher = watch(root, { recursive: true }, () => this.scheduleReconcile());
+        watcher.on("error", () => {
+          this.watcherStatus = "degraded";
+        });
+        this.watchers.push(watcher);
+      } catch {
+        degraded = true;
+      }
+    }
+    this.watcherStatus = degraded || this.watchers.length === 0 ? "degraded" : "watching";
+  }
+  scheduleReconcile() {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null;
+      void this.reconcile().catch(() => {
+        this.watcherStatus = "degraded";
+      });
+    }, WATCH_DEBOUNCE_MS);
+    this.debounceTimer.unref();
+  }
+  async reconcile() {
+    if (this.reconcilePromise) {
+      this.reconcileQueued = true;
+      return this.reconcilePromise;
+    }
+    this.reconcilePromise = (async () => {
+      do {
+        this.reconcileQueued = false;
+        await this.drainStaging();
+        await this.scan();
+      } while (this.reconcileQueued);
+    })().finally(() => {
+      this.reconcilePromise = null;
+    });
+    return this.reconcilePromise;
+  }
+  async drainStaging() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    await mkdir(this.stagingRoot, { recursive: true });
+    const canonicalInbox = await realpath(this.inboxRoot);
+    const canonicalStaging = await realpath(this.stagingRoot);
+    if (canonicalInbox === canonicalStaging) {
+      this.transfer = { ...this.transfer, pending: 0, lastRunAt: (/* @__PURE__ */ new Date()).toISOString(), lastError: null };
+      return;
+    }
+    if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
+      throw new Error("Pinterest Inbox \u957F\u671F\u5E93\u4E0E\u4E34\u65F6\u76EE\u5F55\u4E0D\u80FD\u76F8\u4E92\u5D4C\u5957");
+    }
+    const sourceFiles = await walkImages(canonicalStaging);
+    const next = {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: 0,
+      pending: 0,
+      lastRunAt: (/* @__PURE__ */ new Date()).toISOString(),
+      lastError: null
+    };
+    const errors = [];
+    for (const sourcePath of sourceFiles) {
+      try {
+        if (!await isStableFile(sourcePath)) {
+          next.pending += 1;
+          continue;
+        }
+        const sourceRelativePath = normalizeRelativePath(relative(canonicalStaging, sourcePath));
+        if (sourceRelativePath.startsWith("../") || sourceRelativePath === "..") throw new Error("\u6682\u5B58\u6587\u4EF6\u8D8A\u8FC7\u76EE\u5F55\u8FB9\u754C");
+        const sourceDigest = await hashFile(sourcePath);
+        const extension = extname(sourceRelativePath);
+        const stem = basename(sourceRelativePath, extension);
+        const relativeDirectory = relative(canonicalStaging, dirname(sourcePath));
+        const destinationDirectory = resolve(canonicalInbox, relativeDirectory);
+        await mkdir(destinationDirectory, { recursive: true });
+        const canonicalDestinationDirectory = await realpath(destinationDirectory);
+        if (!isWithin(canonicalInbox, canonicalDestinationDirectory)) throw new Error("\u76EE\u6807\u56FE\u7247\u76EE\u5F55\u8D8A\u8FC7\u957F\u671F\u5E93\u8FB9\u754C");
+        let destinationPath = join(canonicalDestinationDirectory, basename(sourceRelativePath));
+        let renamedForConflict = false;
+        for (let suffixLength = 8; ; suffixLength += 4) {
+          try {
+            const destinationStat = await lstat(destinationPath);
+            if (destinationStat.isFile() && await hashFile(destinationPath) === sourceDigest) {
+              await rm(sourcePath);
+              next.deduplicated += 1;
+              destinationPath = "";
+              break;
+            }
+          } catch (error2) {
+            const code = error2 && typeof error2 === "object" && "code" in error2 ? String(error2.code) : "";
+            if (code !== "ENOENT") throw error2;
+            break;
+          }
+          renamedForConflict = true;
+          destinationPath = join(canonicalDestinationDirectory, `${stem}--${sourceDigest.slice(0, Math.min(suffixLength, sourceDigest.length))}${extension}`);
+        }
+        if (!destinationPath) continue;
+        const temporaryPath = join(canonicalDestinationDirectory, `.${basename(destinationPath)}.${process.pid}.${Date.now()}.tmp`);
+        try {
+          await copyFile(sourcePath, temporaryPath, constants.COPYFILE_EXCL);
+          if (await hashFile(temporaryPath) !== sourceDigest) throw new Error("\u642C\u8FD0\u540E\u6587\u4EF6\u6821\u9A8C\u5931\u8D25");
+          await link(temporaryPath, destinationPath);
+          await rm(temporaryPath);
+          await rm(sourcePath);
+        } catch (error2) {
+          await rm(temporaryPath, { force: true });
+          throw error2;
+        }
+        next.moved += 1;
+        if (renamedForConflict) next.renamed += 1;
+      } catch (error2) {
+        next.failed += 1;
+        next.pending += 1;
+        errors.push(`${basename(sourcePath)}: ${error2 instanceof Error ? error2.message : String(error2)}`);
+      }
+    }
+    next.lastError = errors.length ? errors.slice(0, 3).join("; ") : null;
+    this.transfer = next;
+  }
+  async scan() {
+    if (this.scanPromise) return this.scanPromise;
+    this.scanPromise = this.performScan().finally(() => {
+      this.scanPromise = null;
+    });
+    return this.scanPromise;
+  }
+  async performScan() {
+    await mkdir(this.inboxRoot, { recursive: true });
+    const files = await walkImages(this.inboxRoot);
+    const records = await mapWithConcurrency(files, 12, async (sourcePath) => {
+      const fileStat = await stat(sourcePath);
+      const sourceRelativePath = normalizeRelativePath(relative(this.inboxRoot, sourcePath));
+      const segments = sourceRelativePath.split("/");
+      const boardSlug = segments.length > 1 ? segments[0] ?? "unsorted" : "unsorted";
+      const parsed = parseInboxFilename(basename(sourcePath));
+      return {
+        id: hash(sourceRelativePath).slice(0, 24),
+        pinId: parsed.pinId,
+        boardId: boardSlug,
+        boardTitle: humanizeSlug(boardSlug),
+        title: parsed.title,
+        extension: parsed.extension,
+        size: fileStat.size,
+        updatedAt: fileStat.mtime.toISOString(),
+        sourcePath,
+        sourceRelativePath,
+        signature: hash(`${sourceRelativePath}:${fileStat.size}:${fileStat.mtimeMs}`).slice(0, 16)
+      };
+    });
+    records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const nextAssets = new Map(records.map((record2) => [record2.id, record2]));
+    const previousSignature = [...this.assets.values()].map((item) => item.signature).sort().join(":");
+    const nextSignature = records.map((item) => item.signature).sort().join(":");
+    if (previousSignature !== nextSignature) this.version += 1;
+    this.assets = nextAssets;
+    this.refreshedAt = (/* @__PURE__ */ new Date()).toISOString();
+  }
+  getAsset(assetId) {
+    return this.assets.get(assetId) ?? null;
+  }
+  async resolveAsset(assetId) {
+    const asset = this.getAsset(assetId);
+    if (!asset) return null;
+    try {
+      const canonicalRoot = await realpath(this.inboxRoot);
+      const canonicalSource = await realpath(asset.sourcePath);
+      if (!isWithin(canonicalRoot, canonicalSource) || !(await stat(canonicalSource)).isFile()) return null;
+      return { ...asset, sourcePath: canonicalSource };
+    } catch {
+      return null;
+    }
+  }
+  publicTransferSummary() {
+    return {
+      moved: this.transfer.moved,
+      deduplicated: this.transfer.deduplicated,
+      renamed: this.transfer.renamed,
+      failed: this.transfer.failed,
+      pending: this.transfer.pending,
+      lastRunAt: this.transfer.lastRunAt,
+      lastError: this.transfer.failed > 0 ? "\u6709\u6587\u4EF6\u672A\u80FD\u5B89\u5168\u6536\u53D6\uFF1B\u539F\u6587\u4EF6\u4ECD\u4FDD\u7559\u5728 Downloads \u4E34\u65F6\u533A\uFF0C\u8BF7\u91CD\u8BD5\u3002" : null
+    };
+  }
+  getSummary() {
+    return {
+      version: this.version,
+      total: this.assets.size,
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+  buildBoards(records) {
+    const boardMap = /* @__PURE__ */ new Map();
+    for (const record2 of records) {
+      const items = boardMap.get(record2.boardId) ?? [];
+      items.push(record2);
+      boardMap.set(record2.boardId, items);
+    }
+    return [...boardMap.entries()].map(([id, items]) => ({
+      id,
+      title: items[0]?.boardTitle ?? humanizeSlug(id),
+      pinCount: items.length,
+      coverAssetIds: items.slice(0, 3).map((item) => item.id)
+    })).sort((left, right) => left.title.localeCompare(right.title));
+  }
+  async getPublicPage(options = {}) {
+    if (options.forceRescan) await this.scan();
+    const records = [...this.assets.values()];
+    const words = (options.query ?? "").normalize("NFKC").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filteredRecords = records.filter((record2) => {
+      if (options.boardId && record2.boardId !== options.boardId) return false;
+      const text = `${record2.title} ${record2.boardTitle} ${record2.pinId}`.normalize("NFKC").toLocaleLowerCase();
+      return words.every((word) => text.includes(word));
+    });
+    filteredRecords.sort((left, right) => {
+      const order = options.sort === "title" ? left.title.localeCompare(right.title, "zh-CN", { numeric: true }) : options.sort === "oldest" ? left.updatedAt.localeCompare(right.updatedAt) : right.updatedAt.localeCompare(left.updatedAt);
+      return order || left.id.localeCompare(right.id);
+    });
+    const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
+    const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
+    const visible = filteredRecords.slice(offset, offset + limit);
+    return {
+      mode: "inbox",
+      version: this.version,
+      total: filteredRecords.length,
+      libraryTotal: records.length,
+      cursor: offset === 0 ? null : String(offset),
+      nextCursor: offset + visible.length < filteredRecords.length ? String(offset + visible.length) : null,
+      assets: visible.map(({ sourcePath: _sourcePath, sourceRelativePath: _relativePath, signature: _signature, ...asset }) => asset),
+      boards: this.buildBoards(records),
+      watcherStatus: this.watcherStatus,
+      transfer: this.publicTransferSummary(),
+      refreshedAt: this.refreshedAt
+    };
+  }
+  async getPage(options = {}) {
+    const page = await this.getPublicPage(options);
+    const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
+      try {
+        const thumbnail = await this.getThumbnail(asset.id);
+        if (!thumbnail) throw new Error("\u56FE\u7247\u5DF2\u79BB\u5F00 Pinterest Inbox \u6216\u4E0D\u518D\u53EF\u8BFB");
+        return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null];
+      } catch (error2) {
+        return [asset.id, null, error2 instanceof Error ? error2.message : String(error2)];
+      }
+    });
+    const thumbnails = {};
+    const thumbnailErrors = {};
+    for (const [assetId, dataUrl, error2] of thumbnailEntries) {
+      if (dataUrl) thumbnails[assetId] = dataUrl;
+      if (error2) thumbnailErrors[assetId] = error2;
+    }
+    return {
+      page,
+      thumbnails,
+      thumbnailErrors
+    };
+  }
+  async withThumbnailSlot(task) {
+    if (this.thumbnailActive >= 4) await new Promise((resolveWait) => this.thumbnailWaiters.push(resolveWait));
+    this.thumbnailActive += 1;
+    try {
+      return await task();
+    } finally {
+      this.thumbnailActive -= 1;
+      this.thumbnailWaiters.shift()?.();
+    }
+  }
+  async getThumbnail(assetId) {
+    const asset = await this.resolveAsset(assetId);
+    if (!asset) return null;
+    const requestKey = `${asset.id}:${asset.signature}`;
+    const existing = this.thumbnailPromises.get(requestKey);
+    if (existing) return existing;
+    const pending = (async () => {
+      if (process.platform !== "darwin" || !existsSync("/usr/bin/sips")) throw new Error("macOS sips is unavailable");
+      const cachePath = join(this.cacheRoot, `${asset.id}-${asset.signature}.jpg`);
+      if (!existsSync(cachePath)) {
+        await this.withThumbnailSlot(async () => {
+          if (existsSync(cachePath)) return;
+          const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.jpg`;
+          try {
+            await execFileAsync("/usr/bin/sips", ["-Z", "480", "-s", "format", "jpeg", asset.sourcePath, "--out", temporaryPath], { timeout: 15e3 });
+            await rename(temporaryPath, cachePath);
+          } catch (error2) {
+            await rm(temporaryPath, { force: true });
+            throw error2;
+          }
+        });
+      }
+      return { data: await readFile(cachePath), contentType: "image/jpeg" };
+    })().finally(() => this.thumbnailPromises.delete(requestKey));
+    this.thumbnailPromises.set(requestKey, pending);
+    return pending;
+  }
+  async close() {
+    for (const watcher of this.watchers) watcher.close();
+    this.watchers = [];
+    if (this.reconcileTimer) clearInterval(this.reconcileTimer);
+    this.reconcileTimer = null;
+    if (this.debounceTimer) clearTimeout(this.debounceTimer);
+    this.debounceTimer = null;
+    this.watcherStatus = "stopped";
+  }
+};
+
+// src/local-panel-server.ts
+import { randomBytes as randomBytes2 } from "node:crypto";
+import { constants as constants2, existsSync as existsSync2 } from "node:fs";
+import { open, readFile as readFile2 } from "node:fs/promises";
+import { createServer } from "node:http";
+import { dirname as dirname2, join as join2 } from "node:path";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+// src/references.ts
+import { randomBytes } from "node:crypto";
+import { stat as stat2 } from "node:fs/promises";
+var MAX_REFERENCES = 10;
+var REFERENCE_SESSION_PATTERN = /^[a-f0-9]{32}$/;
+var ReferenceError2 = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+function publicAsset(asset) {
+  const { sourcePath: _path, sourceRelativePath: _relative, signature: _signature, ...value } = asset;
+  return value;
+}
+async function fingerprint(path, indexed) {
+  const value = await stat2(path);
+  if (indexed && (value.size !== indexed.size || value.mtime.toISOString() !== indexed.updatedAt)) {
+    throw new ReferenceError2(409, "\u56FE\u7247\u5728\u7D22\u5F15\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u7D20\u6750\u5E93\u540E\u91CD\u65B0\u9009\u62E9");
+  }
+  return `${value.dev}:${value.ino}:${value.size}:${value.mtimeMs}:${value.ctimeMs}`;
+}
+var ReferenceSessions = class {
+  constructor(inbox2) {
+    this.inbox = inbox2;
+  }
+  sessions = /* @__PURE__ */ new Map();
+  create() {
+    if (this.sessions.size >= 64) throw new ReferenceError2(409, "\u53C2\u8003\u4F1A\u8BDD\u5DF2\u8FBE\u4E0A\u9650\uFF0C\u8BF7\u91CD\u542F\u63D2\u4EF6\u540E\u91CD\u65B0\u9009\u62E9\u56FE\u7247");
+    const session = { id: randomBytes(16).toString("hex"), revision: 0, entries: [] };
+    this.sessions.set(session.id, session);
+    return session.id;
+  }
+  require(id) {
+    const session = REFERENCE_SESSION_PATTERN.test(id) ? this.sessions.get(id) : void 0;
+    if (!session) throw new ReferenceError2(410, "\u53C2\u8003\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u8BA9 Codex \u91CD\u65B0\u6253\u5F00\u53C2\u8003\u7BEE");
+    return session;
+  }
+  async describe(id) {
+    const session = this.require(id);
+    const revision = session.revision;
+    const entries = await Promise.all(session.entries.map(async (entry, index) => {
+      const asset = await this.inbox.resolveAsset(entry.asset.id);
+      const current = asset ? await fingerprint(asset.sourcePath).catch(() => null) : null;
+      const status = current === null ? "missing" : current !== entry.fingerprint ? "changed" : "ready";
+      return { ...entry.asset, number: index + 1, status };
+    }));
+    return { referenceSessionId: id, revision, limit: MAX_REFERENCES, entries };
+  }
+  async replace(id, assetIds, expectedRevision) {
+    const session = this.require(id);
+    if (session.revision !== expectedRevision) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u5DF2\u5728\u5176\u4ED6\u9875\u9762\u66F4\u65B0\uFF0C\u8BF7\u67E5\u770B\u6700\u65B0\u9009\u62E9\u540E\u91CD\u8BD5");
+    if (assetIds.length > MAX_REFERENCES) throw new ReferenceError2(400, `\u4E00\u6B21\u6700\u591A\u9009\u62E9 ${MAX_REFERENCES} \u5F20\u53C2\u8003\u56FE`);
+    if (new Set(assetIds).size !== assetIds.length || assetIds.some((id2) => !/^[a-f0-9]{24}$/.test(id2))) {
+      throw new ReferenceError2(400, "\u53C2\u8003\u56FE\u5217\u8868\u5305\u542B\u91CD\u590D\u9879\u6216\u65E0\u6548\u7D20\u6750 ID");
+    }
+    const entries = await Promise.all(assetIds.map(async (assetId) => {
+      const previous = session.entries.find((entry) => entry.asset.id === assetId);
+      if (previous) return previous;
+      const asset = await this.inbox.resolveAsset(assetId);
+      if (!asset) throw new ReferenceError2(404, "\u56FE\u7247\u5DF2\u4E0D\u5728\u7D20\u6750\u5E93\u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+      const fileFingerprint = await fingerprint(asset.sourcePath, asset).catch((error2) => {
+        if (error2 instanceof ReferenceError2) throw error2;
+        return null;
+      });
+      if (!fileFingerprint) throw new ReferenceError2(404, "\u56FE\u7247\u6682\u65F6\u4E0D\u53EF\u8BFB\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+      return { asset: publicAsset(asset), fingerprint: fileFingerprint };
+    }));
+    if (session.revision !== expectedRevision) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u5DF2\u5728\u5176\u4ED6\u9875\u9762\u66F4\u65B0\uFF0C\u8BF7\u67E5\u770B\u6700\u65B0\u9009\u62E9\u540E\u91CD\u8BD5");
+    if (session.entries.map((entry) => entry.asset.id).join() !== assetIds.join()) {
+      session.entries = entries;
+      session.revision += 1;
+    }
+    return this.describe(id);
+  }
+  async resolve(id, expectedRevision) {
+    const session = this.require(id);
+    const revision = session.revision;
+    if (expectedRevision !== void 0 && revision !== expectedRevision) {
+      throw new ReferenceError2(409, "\u53C2\u8003\u56FE\u9009\u62E9\u5DF2\u7ECF\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u53C2\u8003\u7BEE");
+    }
+    if (!session.entries.length) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u8FD8\u662F\u7A7A\u7684\uFF0C\u8BF7\u5148\u5728\u9762\u677F\u4E2D\u9009\u62E9\u56FE\u7247");
+    const files = await Promise.all(session.entries.map(async (entry, index) => {
+      const asset = await this.inbox.resolveAsset(entry.asset.id);
+      const current = asset ? await fingerprint(asset.sourcePath).catch(() => null) : null;
+      if (!asset || current !== entry.fingerprint) {
+        throw new ReferenceError2(409, `\u53C2\u8003\u56FE ${index + 1} \u5DF2\u53D8\u5316\u6216\u4E0D\u53EF\u7528\uFF0C\u8BF7\u79FB\u9664\u540E\u91CD\u65B0\u9009\u62E9`);
+      }
+      return { number: index + 1, assetId: asset.id, title: asset.title, boardTitle: asset.boardTitle, path: asset.sourcePath };
+    }));
+    if (session.revision !== revision) throw new ReferenceError2(409, "\u8BFB\u53D6\u671F\u95F4\u53C2\u8003\u56FE\u9009\u62E9\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u91CD\u8BD5");
+    return { referenceSessionId: id, revision, files };
+  }
+};
+
+// src/local-panel-server.ts
+var LOOPBACK_HOST = "127.0.0.1";
+var MAX_JSON_BYTES = 2048;
+var CLOSE_GRACE_MS = 500;
+var ASSET_ID_PATTERN = /^[a-f0-9]{24}$/;
+var HttpError = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+function commonHeaders() {
+  return {
+    "Cache-Control": "no-store",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff"
+  };
+}
+function sendJson(response, status, value) {
+  response.writeHead(status, { ...commonHeaders(), "Content-Type": "application/json; charset=utf-8" });
+  response.end(JSON.stringify(value));
+}
+function requestCookie(request, name) {
+  const cookieHeader = request.headers.cookie ?? "";
+  for (const entry of cookieHeader.split(";")) {
+    const [key, ...parts] = entry.trim().split("=");
+    if (key === name) return parts.join("=");
+  }
+  return null;
+}
+function assertLoopbackRequest(request, expectedHost) {
+  const remoteAddress = request.socket.remoteAddress;
+  if (remoteAddress !== LOOPBACK_HOST && remoteAddress !== `::ffff:${LOOPBACK_HOST}`) {
+    throw new HttpError(403, "\u4EC5\u5141\u8BB8\u672C\u673A\u8BBF\u95EE Pinterest Inbox \u9762\u677F");
+  }
+  if (request.headers.host !== expectedHost) {
+    throw new HttpError(421, "\u8BF7\u6C42\u4E3B\u673A\u4E0E\u672C\u5730\u9762\u677F\u4E0D\u5339\u914D");
+  }
+}
+function assertApiSession(request, sessionId, csrfToken, cookieName) {
+  if (requestCookie(request, cookieName) !== sessionId) {
+    throw new HttpError(401, "\u672C\u5730\u9762\u677F\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u5237\u65B0\u9875\u9762");
+  }
+  if (request.headers["x-pinterest-panel-token"] !== csrfToken) {
+    throw new HttpError(403, "\u672C\u5730\u9762\u677F\u4EE4\u724C\u65E0\u6548\uFF0C\u8BF7\u5237\u65B0\u9875\u9762");
+  }
+}
+function assertSameOriginMutation(request, origin) {
+  if (request.headers.origin !== origin) {
+    throw new HttpError(403, "\u62D2\u7EDD\u6765\u81EA\u5176\u4ED6\u9875\u9762\u7684\u5199\u64CD\u4F5C");
+  }
+  const fetchSite = request.headers["sec-fetch-site"];
+  if (fetchSite && fetchSite !== "same-origin") {
+    throw new HttpError(403, "\u62D2\u7EDD\u8DE8\u7AD9\u5199\u64CD\u4F5C");
+  }
+  const contentType = request.headers["content-type"] ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    throw new HttpError(415, "\u8BF7\u6C42\u5FC5\u987B\u4F7F\u7528 JSON");
+  }
+}
+async function readJson(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.byteLength;
+    if (size > MAX_JSON_BYTES) throw new HttpError(413, "\u8BF7\u6C42\u5185\u5BB9\u8FC7\u5927");
+    chunks.push(buffer);
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new HttpError(400, "\u8BF7\u6C42 JSON \u65E0\u6548");
+  }
+}
+function parseAssetId(value) {
+  if (typeof value !== "string" || !ASSET_ID_PATTERN.test(value)) {
+    throw new HttpError(400, "\u7D20\u6750 ID \u65E0\u6548");
+  }
+  return value;
+}
+function parsePort(value) {
+  if (value === void 0) return 0;
+  if (!Number.isInteger(value) || value < 0 || value > 65535) throw new Error("PINTEREST_PANEL_PORT \u5FC5\u987B\u662F 0 \u5230 65535 \u7684\u6574\u6570");
+  return value;
+}
+function runClipboardCommand(command, input, deadline) {
+  return new Promise((resolveCommand, rejectCommand) => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      rejectCommand(new Error("clipboard timeout"));
+      return;
+    }
+    const child = spawn(`/usr/bin/${command}`, command === "pbpaste" ? ["-Prefer", "txt"] : [], {
+      stdio: ["pipe", "pipe", "ignore"],
+      // GUI/MCP hosts may use C or no locale. pbcopy can exit 0 yet discard
+      // non-ASCII input in that environment; stdin's UTF-8 flag alone is insufficient.
+      env: { ...process.env, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", LC_CTYPE: "en_US.UTF-8" }
+    });
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+    const finish = (error2) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error2) rejectCommand(error2);
+      else resolveCommand(Buffer.concat(chunks));
+    };
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish(new Error("clipboard timeout"));
+    }, remaining);
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      size += chunk.byteLength;
+      if (size > 16384) {
+        child.kill("SIGKILL");
+        finish(new Error("clipboard content changed"));
+      } else chunks.push(Buffer.from(chunk));
+    });
+    child.once("error", (error2) => finish(error2));
+    child.once("close", (code) => {
+      if (code === 0) finish();
+      else finish(new Error("clipboard command failed"));
+    });
+    child.stdin.once("error", (error2) => finish(error2));
+    child.stdin.end(input, "utf8");
+  });
+}
+async function writeTextToMacClipboard(text) {
+  if (process.platform !== "darwin" || !existsSync2("/usr/bin/pbcopy") || !existsSync2("/usr/bin/pbpaste")) {
+    throw new HttpError(503, "\u5F53\u524D\u7CFB\u7EDF\u6CA1\u6709\u53EF\u7528\u7684 macOS \u526A\u8D34\u677F\u670D\u52A1");
+  }
+  if (!text || text.includes("\0") || Buffer.byteLength(text, "utf8") > 16384) {
+    throw new HttpError(400, "\u5F85\u590D\u5236\u8DEF\u5F84\u65E0\u6548\u6216\u8FC7\u957F");
+  }
+  try {
+    const deadline = Date.now() + 5e3;
+    await runClipboardCommand("pbcopy", text, deadline);
+    const copied = await runClipboardCommand("pbpaste", "", deadline);
+    if (!copied.equals(Buffer.from(text, "utf8"))) throw new Error("clipboard verification failed");
+  } catch {
+    throw new HttpError(503, "\u672A\u80FD\u786E\u8BA4\u8DEF\u5F84\u5DF2\u5199\u5165\u526A\u8D34\u677F\uFF0C\u8BF7\u91CD\u65B0\u590D\u5236");
+  }
+}
+async function startLocalPanelServer(options) {
+  const moduleDirectory2 = dirname2(fileURLToPath(import.meta.url));
+  const assetRoot = options.assetRoot ?? join2(moduleDirectory2, "../assets");
+  const [htmlTemplate, css, javascript] = await Promise.all([
+    readFile2(join2(assetRoot, "local-panel.html"), "utf8"),
+    readFile2(join2(assetRoot, "local-panel.css"), "utf8"),
+    readFile2(join2(assetRoot, "local-panel.js"), "utf8")
+  ]);
+  const clipboardWriter = options.clipboardWriter ?? writeTextToMacClipboard;
+  const references2 = options.references ?? new ReferenceSessions(options.inbox);
+  const sessionId = randomBytes2(24).toString("base64url");
+  const csrfToken = randomBytes2(24).toString("base64url");
+  let origin = "";
+  let expectedHost = "";
+  let cookieName = "";
+  const httpServer = createServer((request, response) => {
+    void (async () => {
+      assertLoopbackRequest(request, expectedHost);
+      const method = request.method ?? "GET";
+      const requestUrl = new URL(request.url ?? "/", origin);
+      if (method === "GET" && requestUrl.pathname === "/") {
+        const referenceSessionId2 = requestUrl.searchParams.get("ref") ?? "";
+        if (referenceSessionId2 && !REFERENCE_SESSION_PATTERN.test(referenceSessionId2)) throw new HttpError(400, "\u53C2\u8003\u4F1A\u8BDD\u5730\u5740\u65E0\u6548");
+        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken).replace("__PINTEREST_REFERENCE_SESSION__", referenceSessionId2);
+        response.writeHead(200, {
+          ...commonHeaders(),
+          "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+          "Content-Type": "text/html; charset=utf-8",
+          "Set-Cookie": `${cookieName}=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
+        });
+        response.end(html);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/local-panel.css") {
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": "text/css; charset=utf-8" });
+        response.end(css);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/local-panel.js") {
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": "text/javascript; charset=utf-8" });
+        response.end(javascript);
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/favicon.ico") {
+        response.writeHead(204, commonHeaders());
+        response.end();
+        return;
+      }
+      if (!requestUrl.pathname.startsWith("/api/")) throw new HttpError(404, "\u9875\u9762\u4E0D\u5B58\u5728");
+      assertApiSession(request, sessionId, csrfToken, cookieName);
+      const referenceSessionId = () => {
+        const id = request.headers["x-pinterest-reference-session"];
+        if (typeof id !== "string") throw new HttpError(400, "\u8BF7\u4ECE\u5F53\u524D Codex \u4EFB\u52A1\u6253\u5F00\u53C2\u8003\u7BEE");
+        references2.require(id);
+        return id;
+      };
+      if (method === "GET" && requestUrl.pathname === "/api/references") {
+        sendJson(response, 200, await references2.describe(referenceSessionId()));
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/api/status") {
+        const knownVersionRaw = requestUrl.searchParams.get("knownVersion");
+        const knownVersion = knownVersionRaw && /^\d+$/.test(knownVersionRaw) ? Number.parseInt(knownVersionRaw, 10) : null;
+        const summary = options.inbox.getSummary();
+        sendJson(response, 200, { unchanged: knownVersion !== null && knownVersion === summary.version, ...summary });
+        return;
+      }
+      if (method === "GET" && requestUrl.pathname === "/api/inbox") {
+        const cursorRaw = requestUrl.searchParams.get("cursor");
+        const limitRaw = requestUrl.searchParams.get("limit");
+        const boardIdRaw = requestUrl.searchParams.get("boardId");
+        const query = requestUrl.searchParams.get("q") ?? "";
+        const sort = requestUrl.searchParams.get("sort") ?? "recent";
+        if (query.length > 200) throw new HttpError(400, "\u641C\u7D22\u5185\u5BB9\u8FC7\u957F\uFF0C\u8BF7\u7F29\u77ED\u5173\u952E\u8BCD");
+        if (sort !== "recent" && sort !== "oldest" && sort !== "title") throw new HttpError(400, "\u6392\u5E8F\u65B9\u5F0F\u65E0\u6548");
+        if (cursorRaw && !/^\d{1,9}$/.test(cursorRaw)) throw new HttpError(400, "\u5206\u9875\u6E38\u6807\u65E0\u6548");
+        if (limitRaw && !/^\d{1,2}$/.test(limitRaw)) throw new HttpError(400, "\u5206\u9875\u6570\u91CF\u65E0\u6548");
+        if (boardIdRaw && (boardIdRaw.length > 255 || /[\u0000-\u001f]/.test(boardIdRaw))) throw new HttpError(400, "\u56FE\u7248 ID \u65E0\u6548");
+        const page = await options.inbox.getPublicPage({
+          ...cursorRaw ? { cursor: cursorRaw } : {},
+          ...limitRaw ? { limit: Number.parseInt(limitRaw, 10) } : {},
+          ...boardIdRaw ? { boardId: boardIdRaw } : {},
+          query,
+          sort
+        });
+        sendJson(response, 200, { page });
+        return;
+      }
+      const thumbnailMatch = method === "GET" ? requestUrl.pathname.match(/^\/api\/thumbnails\/([a-f0-9]{24})$/) : null;
+      if (thumbnailMatch) {
+        const thumbnail = await options.inbox.getThumbnail(thumbnailMatch[1] ?? "");
+        if (!thumbnail) throw new HttpError(404, "\u7D20\u6750\u5DF2\u4E0D\u5728 Inbox \u4E2D");
+        response.writeHead(200, { ...commonHeaders(), "Content-Type": thumbnail.contentType });
+        response.end(thumbnail.data);
+        return;
+      }
+      const previewMatch = method === "GET" ? requestUrl.pathname.match(/^\/api\/previews\/([a-f0-9]{24})$/) : null;
+      if (previewMatch) {
+        const asset = await options.inbox.resolveAsset(previewMatch[1] ?? "");
+        if (!asset) throw new HttpError(404, "\u539F\u56FE\u5DF2\u4E0D\u5728\u7D20\u6750\u5E93\u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+        const file = await open(asset.sourcePath, constants2.O_RDONLY | constants2.O_NOFOLLOW);
+        try {
+          const info = await file.stat();
+          if (!info.isFile()) throw new HttpError(404, "\u539F\u56FE\u4E0D\u53EF\u7528");
+          if (info.size > 64 * 1024 * 1024) throw new HttpError(413, "\u539F\u56FE\u8D85\u8FC7 64 MB\uFF0C\u8BF7\u590D\u5236\u8DEF\u5F84\u540E\u4EA4\u7ED9 Codex \u67E5\u770B");
+          const current = await options.inbox.resolveAsset(asset.id);
+          if (!current || current.sourcePath !== asset.sourcePath) throw new HttpError(409, "\u539F\u56FE\u4F4D\u7F6E\u5DF2\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+          const types = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".avif": "image/avif", ".gif": "image/gif" };
+          const contentType = types[asset.extension];
+          if (!contentType) throw new HttpError(415, "\u6682\u4E0D\u652F\u6301\u9884\u89C8\u6B64\u683C\u5F0F");
+          const bytes = await file.readFile();
+          response.writeHead(200, { ...commonHeaders(), "Content-Type": contentType, "Content-Length": bytes.length });
+          response.end(bytes);
+        } finally {
+          await file.close();
+        }
+        return;
+      }
+      if (method === "POST") assertSameOriginMutation(request, origin);
+      if (method === "POST" && requestUrl.pathname === "/api/references") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "\u53C2\u8003\u7BEE\u8BF7\u6C42\u65E0\u6548");
+        const value = body;
+        if (Object.keys(body).sort().join() !== "assetIds,revision" || !Array.isArray(value.assetIds) || !value.assetIds.every((id) => typeof id === "string") || !Number.isInteger(value.revision) || Number(value.revision) < 0) {
+          throw new HttpError(400, "\u53C2\u8003\u7BEE\u53EA\u80FD\u63D0\u4EA4\u7D20\u6750 ID \u5217\u8868\u4E0E\u7248\u672C\u53F7");
+        }
+        sendJson(response, 200, await references2.replace(referenceSessionId(), value.assetIds, Number(value.revision)));
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/references/clipboard") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).join() !== "revision" || !Number.isInteger(body.revision)) throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u9700\u8981\u53C2\u8003\u7BEE\u7248\u672C\u53F7");
+        const selected = await references2.resolve(referenceSessionId(), body.revision);
+        await clipboardWriter(selected.files.map((file) => file.path).join("\n"));
+        sendJson(response, 200, { status: "copied", count: selected.files.length });
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/refresh") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 0) {
+          throw new HttpError(400, "\u5237\u65B0\u8BF7\u6C42\u4E0D\u63A5\u53D7\u989D\u5916\u53C2\u6570");
+        }
+        await options.inbox.reconcile();
+        sendJson(response, 200, { status: "refreshed", ...options.inbox.getSummary() });
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/clipboard") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u65E0\u6548");
+        const entries = Object.keys(body);
+        if (entries.length !== 1 || entries[0] !== "assetId") throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u53EA\u80FD\u63D0\u4EA4\u7D20\u6750 ID");
+        const assetId = parseAssetId(body.assetId);
+        const asset = await options.inbox.resolveAsset(assetId);
+        if (!asset) throw new HttpError(404, "\u7D20\u6750\u5DF2\u4E0D\u5728 Inbox \u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+        await clipboardWriter(asset.sourcePath);
+        sendJson(response, 200, {
+          status: "copied",
+          assetId,
+          title: asset.title,
+          fileName: asset.sourceRelativePath.split("/").at(-1) ?? asset.title
+        });
+        return;
+      }
+      throw new HttpError(404, "\u63A5\u53E3\u4E0D\u5B58\u5728");
+    })().catch((error2) => {
+      if (response.headersSent) {
+        response.destroy();
+        return;
+      }
+      const status = error2 instanceof HttpError || error2 instanceof ReferenceError2 ? error2.status : 500;
+      const message = error2 instanceof HttpError || error2 instanceof ReferenceError2 ? error2.message : "\u672C\u5730\u9762\u677F\u6682\u65F6\u65E0\u6CD5\u5B8C\u6210\u8BF7\u6C42\uFF0C\u8BF7\u91CD\u8BD5";
+      sendJson(response, status, { error: message });
+    });
+  });
+  const requestedPort = parsePort(options.port);
+  await new Promise((resolveListen, rejectListen) => {
+    const onError = (error2) => rejectListen(error2);
+    httpServer.once("error", onError);
+    httpServer.listen(requestedPort, LOOPBACK_HOST, () => {
+      httpServer.off("error", onError);
+      resolveListen();
+    });
+  });
+  const address = httpServer.address();
+  if (!address || typeof address === "string") {
+    httpServer.close();
+    throw new Error("\u65E0\u6CD5\u786E\u5B9A Pinterest Inbox \u672C\u5730\u9762\u677F\u7AEF\u53E3");
+  }
+  origin = `http://${LOOPBACK_HOST}:${address.port}`;
+  expectedHost = `${LOOPBACK_HOST}:${address.port}`;
+  cookieName = `pinterest_panel_session_${address.port}`;
+  let closePromise = null;
+  return {
+    host: LOOPBACK_HOST,
+    port: address.port,
+    url: `${origin}/`,
+    close: () => {
+      if (!closePromise) {
+        closePromise = new Promise((resolveClose, rejectClose) => {
+          const forceClose = setTimeout(() => httpServer.closeAllConnections(), CLOSE_GRACE_MS);
+          forceClose.unref();
+          httpServer.close((error2) => {
+            clearTimeout(forceClose);
+            if (error2) rejectClose(error2);
+            else resolveClose();
+          });
+          httpServer.closeIdleConnections();
+        }).catch((error2) => {
+          closePromise = null;
+          throw error2;
+        });
+      }
+      return closePromise;
+    }
   };
 }
 
+// src/workspace.ts
+import { createHash as createHash2, randomBytes as randomBytes3 } from "node:crypto";
+import { execFile as execFile2 } from "node:child_process";
+import { constants as constants3, existsSync as existsSync3 } from "node:fs";
+import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, rm as rm2, stat as stat3 } from "node:fs/promises";
+import { homedir as homedir2 } from "node:os";
+import { basename as basename2, dirname as dirname3, extname as extname2, join as join3, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
+import { promisify as promisify2 } from "node:util";
+var execFileAsync2 = promisify2(execFile2);
+var REFERENCE_MAX_EDGE = 2048;
+var REFERENCE_JPEG_QUALITY = 80;
+function isWithin2(root, candidate) {
+  const pathFromRoot = relative2(root, candidate);
+  return pathFromRoot === "" || !pathFromRoot.startsWith(`..${sep2}`) && pathFromRoot !== "..";
+}
+function safeSegment(value) {
+  const cleaned = value.normalize("NFKC").replace(/[\u0000-\u001f\u007f/\\:*?"<>|]/g, "-").replace(/\.{2,}/g, ".").replace(/\s+/g, " ").trim().replace(/^\.+|\.+$/g, "").slice(0, 96);
+  return cleaned || "reference";
+}
+async function fileHash(path) {
+  return createHash2("sha256").update(await readFile3(path)).digest("hex");
+}
+function parseSipsProperties(stdout) {
+  const property = (name) => stdout.match(new RegExp(`^\\s*${name}:\\s*(.+)\\s*$`, "mi"))?.[1]?.trim() ?? null;
+  const width = Number.parseInt(property("pixelWidth") ?? "", 10);
+  const height = Number.parseInt(property("pixelHeight") ?? "", 10);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) throw new Error("\u65E0\u6CD5\u8BFB\u53D6\u56FE\u7247\u5C3A\u5BF8");
+  return { width, height, hasAlpha: /^(yes|true)$/i.test(property("hasAlpha") ?? "") };
+}
+var WorkspaceRegistry = class {
+  roots = /* @__PURE__ */ new Map();
+  derivativeCacheRoot;
+  imageProcessorPath;
+  platform;
+  constructor(options = {}) {
+    this.derivativeCacheRoot = resolve2(options.derivativeCacheRoot ?? join3(homedir2(), "Library", "Caches", "pinterest-reference-panel", "references"));
+    this.imageProcessorPath = options.imageProcessorPath ?? "/usr/bin/sips";
+    this.platform = options.platform ?? process.platform;
+  }
+  async register(candidate) {
+    if (!candidate) return { available: false, name: null, token: null, reason: "Codex \u672A\u63D0\u4F9B\u5F53\u524D\u5DE5\u4F5C\u533A\u8DEF\u5F84" };
+    try {
+      const canonicalPath = await realpath2(resolve2(candidate));
+      if (!(await stat3(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
+      await access(canonicalPath, constants3.R_OK | constants3.W_OK);
+      const token = randomBytes3(24).toString("base64url");
+      this.roots.set(token, canonicalPath);
+      return { available: true, name: basename2(canonicalPath), token, reason: null };
+    } catch (error2) {
+      return { available: false, name: null, token: null, reason: error2 instanceof Error ? error2.message : String(error2) };
+    }
+  }
+  async importAsset(asset, token) {
+    const workspaceRoot = this.roots.get(token);
+    if (!workspaceRoot) throw new Error("\u5DE5\u4F5C\u533A\u4EE4\u724C\u65E0\u6548\u6216\u5DF2\u8FC7\u671F");
+    const canonicalRoot = await realpath2(workspaceRoot);
+    const destinationDirectory = join3(canonicalRoot, "references", "pinterest", safeSegment(asset.boardId));
+    await mkdir2(destinationDirectory, { recursive: true });
+    const canonicalDestinationDirectory = await realpath2(destinationDirectory);
+    if (!isWithin2(canonicalRoot, canonicalDestinationDirectory)) throw new Error("\u5DE5\u4F5C\u533A\u5B50\u76EE\u5F55\u6307\u5411\u4E86\u6839\u76EE\u5F55\u4E4B\u5916");
+    const prepared = await this.prepareReference(asset);
+    const extension = prepared.extension;
+    const stem = safeSegment(basename2(asset.sourcePath, extname2(asset.sourcePath)));
+    const sourceDigest = await fileHash(prepared.path);
+    let destinationPath = join3(canonicalDestinationDirectory, `${stem}${extension}`);
+    try {
+      if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
+      destinationPath = join3(canonicalDestinationDirectory, `${stem}-${sourceDigest.slice(0, 8)}${extension}`);
+      try {
+        if (await fileHash(destinationPath) === sourceDigest) return this.result(canonicalRoot, destinationPath, true, prepared);
+      } catch {
+      }
+    } catch {
+    }
+    if (!isWithin2(canonicalRoot, await realpath2(dirname3(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
+    await copyFile2(prepared.path, destinationPath, constants3.COPYFILE_EXCL);
+    return this.result(canonicalRoot, destinationPath, false, prepared);
+  }
+  async prepareReference(asset) {
+    const sourceExtension = extname2(asset.sourcePath).toLowerCase() === ".jpeg" ? ".jpg" : extname2(asset.sourcePath).toLowerCase();
+    const fallback = (reason) => ({
+      path: asset.sourcePath,
+      extension: sourceExtension,
+      optimization: "fallback",
+      cacheReused: false,
+      reason
+    });
+    if (sourceExtension === ".webp") {
+      return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+    }
+    if (this.platform !== "darwin" || !existsSync3(this.imageProcessorPath)) return fallback("macOS sips \u4E0D\u53EF\u7528\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6");
+    let temporaryPath = null;
+    try {
+      const inspected = await execFileAsync2(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15e3 });
+      const properties = parseSipsProperties(inspected.stdout);
+      const sourceStat = await stat3(asset.sourcePath);
+      const withinReferenceSize = Math.max(properties.width, properties.height) <= REFERENCE_MAX_EDGE;
+      const reusableFormat = properties.hasAlpha ? sourceExtension === ".png" : sourceExtension === ".jpg";
+      if (withinReferenceSize && reusableFormat) {
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+      }
+      const targetExtension = properties.hasAlpha ? ".png" : ".jpg";
+      const recipe = properties.hasAlpha ? `png-${REFERENCE_MAX_EDGE}` : `jpeg-${REFERENCE_MAX_EDGE}-q${REFERENCE_JPEG_QUALITY}`;
+      const digest = await fileHash(asset.sourcePath);
+      await mkdir2(this.derivativeCacheRoot, { recursive: true });
+      const canonicalCacheRoot = await realpath2(this.derivativeCacheRoot);
+      const cachePath = join3(canonicalCacheRoot, `${digest.slice(0, 32)}-${recipe}${targetExtension}`);
+      if (existsSync3(cachePath)) {
+        const cachedStat = await lstat2(cachePath);
+        if (!cachedStat.isFile() || cachedStat.isSymbolicLink() || cachedStat.size < 1) throw new Error("\u5F15\u7528\u7F13\u5B58\u4E0D\u662F\u5B89\u5168\u7684\u666E\u901A\u6587\u4EF6");
+        if (cachedStat.size >= sourceStat.size) {
+          return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+        }
+        return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: true, reason: null };
+      }
+      temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp${targetExtension}`;
+      const formatArguments = properties.hasAlpha ? ["-s", "format", "png"] : ["-s", "format", "jpeg", "-s", "formatOptions", String(REFERENCE_JPEG_QUALITY)];
+      await execFileAsync2(this.imageProcessorPath, ["-Z", String(REFERENCE_MAX_EDGE), ...formatArguments, asset.sourcePath, "--out", temporaryPath], { timeout: 6e4 });
+      const generatedStat = await stat3(temporaryPath);
+      if (generatedStat.size < 1) throw new Error("\u751F\u6210\u7684\u5F15\u7528\u56FE\u7247\u4E3A\u7A7A");
+      if (generatedStat.size >= sourceStat.size) {
+        await rm2(temporaryPath, { force: true });
+        temporaryPath = null;
+        return { path: asset.sourcePath, extension: sourceExtension, optimization: "source-lightweight", cacheReused: false, reason: null };
+      }
+      await rename2(temporaryPath, cachePath);
+      temporaryPath = null;
+      return { path: cachePath, extension: targetExtension, optimization: "generated", cacheReused: false, reason: null };
+    } catch (error2) {
+      return fallback(error2 instanceof Error ? `\u5F15\u7528\u7248\u751F\u6210\u5931\u8D25\uFF1A${error2.message}` : "\u5F15\u7528\u7248\u751F\u6210\u5931\u8D25");
+    } finally {
+      if (temporaryPath) await rm2(temporaryPath, { force: true });
+    }
+  }
+  result(workspaceRoot, destinationPath, reused, prepared) {
+    return {
+      relativePath: relative2(workspaceRoot, destinationPath).split(sep2).join("/"),
+      fileName: basename2(destinationPath),
+      reused,
+      optimization: prepared.optimization,
+      cacheReused: prepared.cacheReused,
+      optimizationReason: prepared.reason
+    };
+  }
+};
+
 // src/server.ts
 var PANEL_URI = "ui://pinterest-reference-panel/panel.html";
-var moduleDirectory = dirname(fileURLToPath(import.meta.url));
-var panelHtml = readFileSync(join(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
+var moduleDirectory = dirname4(fileURLToPath2(import.meta.url));
+var panelHtml = readFileSync(join4(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
+var inbox = new InboxService();
+var workspaces = new WorkspaceRegistry();
+var references = new ReferenceSessions(inbox);
+var localPanel = null;
+var localPanelStart = null;
+var localPanelStop = null;
+async function ensureLocalPanel() {
+  if (localPanelStop) await localPanelStop;
+  if (localPanel) return localPanel;
+  if (!localPanelStart) {
+    const configuredPort = process.env.PINTEREST_PANEL_PORT ? Number(process.env.PINTEREST_PANEL_PORT) : 0;
+    localPanelStart = startLocalPanelServer({ inbox, references, port: configuredPort }).then((handle) => {
+      localPanel = handle;
+      return handle;
+    }).finally(() => {
+      localPanelStart = null;
+    });
+  }
+  return localPanelStart;
+}
+async function stopLocalPanel() {
+  if (!localPanelStop) {
+    localPanelStop = (async () => {
+      const handle = localPanel ?? (localPanelStart ? await localPanelStart : null);
+      if (!handle) return false;
+      await handle.close();
+      if (localPanel === handle) localPanel = null;
+      return true;
+    })().finally(() => {
+      localPanelStop = null;
+    });
+  }
+  return localPanelStop;
+}
+function reportInternalError(context, error2) {
+  const detail = error2 instanceof Error ? error2.stack ?? error2.message : String(error2);
+  process.stderr.write(`[pinterest-reference-panel] ${context}: ${detail}
+`);
+}
 var server = new McpServer(
+  { name: "pinterest-reference-panel", version: "0.4.0" },
   {
-    name: "pinterest-reference-panel",
-    version: "0.1.0"
+    capabilities: { resources: {}, tools: {} },
+    instructions: "When Pinterest Inbox is selected or mentioned, an unqualified request to open it (including \u6253\u5F00\u9879\u76EE) means launch its running material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
+  }
+);
+async function workspaceCandidate(explicitRoot) {
+  const capabilities = server.server.getClientCapabilities();
+  if (capabilities?.roots) {
+    try {
+      const result = await server.server.listRoots();
+      const fileRoots = result.roots.map((root) => {
+        try {
+          return root.uri.startsWith("file:") ? fileURLToPath2(root.uri) : null;
+        } catch {
+          return null;
+        }
+      }).filter((root) => Boolean(root));
+      if (fileRoots.length === 1) return fileRoots[0] ?? null;
+      if (explicitRoot && fileRoots.some((root) => explicitRoot === root || explicitRoot.startsWith(`${root}/`))) return explicitRoot;
+    } catch {
+    }
+  }
+  return explicitRoot ?? null;
+}
+async function panelResult(options) {
+  if (!options.forceRescan && options.knownVersion !== void 0) {
+    const summary = inbox.getSummary();
+    if (summary.version === options.knownVersion) {
+      return {
+        structuredContent: { mode: "inbox", unchanged: true, ...summary },
+        content: [{ type: "text", text: "Pinterest Inbox \u6CA1\u6709\u53D8\u5316\u3002" }],
+        _meta: { pinterestInbox: { thumbnails: {}, thumbnailErrors: {} } }
+      };
+    }
+  }
+  const pageResult = await inbox.getPage({
+    ...options.cursor ? { cursor: options.cursor } : {},
+    ...options.limit ? { limit: options.limit } : {},
+    ...options.forceRescan !== void 0 ? { forceRescan: options.forceRescan } : {}
+  });
+  const workspace = options.registerWorkspace ? await workspaces.register(await workspaceCandidate(options.workspaceRoot)) : null;
+  const publicWorkspace = workspace ? { available: workspace.available, name: workspace.name, reason: workspace.reason } : null;
+  return {
+    structuredContent: { ...pageResult.page, ...publicWorkspace ? { workspace: publicWorkspace } : {} },
+    content: [{
+      type: "text",
+      text: `Pinterest Inbox \u5DF2\u8BFB\u53D6 ${pageResult.page.total} \u5F20\u56FE\u7247\u3002${workspace?.available ? `\u5F53\u524D\u5DE5\u4F5C\u533A\uFF1A${workspace.name}\u3002` : ""}`
+    }],
+    _meta: {
+      pinterestInbox: {
+        thumbnails: pageResult.thumbnails,
+        thumbnailErrors: pageResult.thumbnailErrors,
+        inboxPath: inbox.inboxRoot,
+        stagingPath: inbox.stagingRoot,
+        workspaceToken: workspace?.token ?? null
+      }
+    }
+  };
+}
+server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => ({
+  contents: [{
+    uri: PANEL_URI,
+    mimeType: "text/html;profile=mcp-app",
+    text: panelHtml,
+    _meta: {
+      ui: { prefersBorder: false },
+      "openai/widgetDescription": "Pinterest Inbox \u672C\u5730\u7D20\u6750\u7011\u5E03\u6D41\uFF0C\u53EF\u5C06\u9009\u4E2D\u56FE\u7247\u5BFC\u5165\u5F53\u524D\u5DE5\u4F5C\u533A\u3002"
+    }
+  }]
+}));
+server.registerTool(
+  "list_pinterest_inbox",
+  {
+    title: "\u8BFB\u53D6 Pinterest Inbox",
+    description: "\u5206\u9875\u8BFB\u53D6\u672C\u5730 PinterestInbox \u7684\u56FE\u7247\u4E0E\u56FE\u7248\u76EE\u5F55\u3002",
+    inputSchema: {
+      cursor: external_exports.string().optional(),
+      limit: external_exports.number().int().min(1).max(30).optional(),
+      forceRescan: external_exports.boolean().optional(),
+      knownVersion: external_exports.number().int().min(0).optional()
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },
+  async ({ cursor, limit, forceRescan, knownVersion }) => panelResult({
+    ...cursor ? { cursor } : {},
+    ...limit ? { limit } : {},
+    ...forceRescan !== void 0 ? { forceRescan } : {},
+    ...knownVersion !== void 0 ? { knownVersion } : {}
+  })
+);
+server.registerTool(
+  "open_pinterest_inbox_web",
   {
-    capabilities: {
-      resources: {},
-      tools: {}
+    title: "\u542F\u52A8 Pinterest Inbox \u53F3\u4FA7\u7D20\u6750\u9762\u677F",
+    description: "\u9009\u62E9\u6216\u63D0\u5230 Pinterest Inbox \u63D2\u4EF6\u540E\u8981\u6C42\u6253\u5F00/\u542F\u52A8\uFF08\u5982\u2018\u6253\u5F00\u9879\u76EE\u2019\uFF09\u65F6\u8C03\u7528\u3002\u542F\u52A8\u7D20\u6750\u5DE5\u4F5C\u53F0\u540E\uFF0C\u7EE7\u7EED\u8C03\u7528 Codex open_in_codex\uFF0C\u4EE5 target.type=browser\u3001target.url=\u8FD4\u56DE\u7684\u5B8C\u6574 URL\u3001placement=right \u663E\u793A\u5230\u5F53\u524D\u4EFB\u52A1\u53F3\u4FA7\u3002\u9996\u6B21\u4E0D\u4F20\u53C2\u6570\u521B\u5EFA\u72EC\u7ACB\u53C2\u8003\u7BEE\uFF1B\u4FDD\u5B58 referenceSessionId\uFF0C\u91CD\u5F00\u6216\u8BFB\u53D6\u9009\u56FE\u65F6\u4F20\u56DE\uFF0C\u4E0D\u5F97\u501F\u7528\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD\u3002\u53EA\u6709\u660E\u786E\u8981\u6E90\u7801\u6216\u6587\u6863\u65F6\u624D\u6253\u5F00\u6587\u4EF6\u3002",
+    inputSchema: { referenceSessionId: external_exports.string().regex(REFERENCE_SESSION_PATTERN).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u5C31\u7EEA"
+    }
+  },
+  async ({ referenceSessionId }) => {
+    try {
+      const handle = await ensureLocalPanel();
+      const id = referenceSessionId ? references.require(referenceSessionId).id : references.create();
+      const url = `${handle.url}?ref=${id}`;
+      return {
+        structuredContent: { status: "running", url, referenceSessionId: id, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
+        content: [{ type: "text", text: `Pinterest Inbox \u670D\u52A1\u5DF2\u5C31\u7EEA\uFF1A${url}\u3002\u4E0B\u4E00\u6B65\u5FC5\u987B\u8C03\u7528 Codex open_in_codex\uFF1Atarget={type:"browser",url:"${url}"}\uFF0Cplacement="right"\u3002\u670D\u52A1\u5C31\u7EEA\u4E0D\u7B49\u4E8E\u9762\u677F\u5DF2\u663E\u793A\uFF0C\u8BF7\u6839\u636E\u6D4F\u89C8\u5668\u5DE5\u5177\u7ED3\u679C\u62A5\u544A\u5DF2\u6253\u5F00\u6216\u5DF2\u6392\u961F\u3002\u4FDD\u7559\u672C\u4EFB\u52A1\u7684\u53C2\u8003\u4F1A\u8BDD ${id}\u3002\u7528\u6237\u9009\u56FE\u540E\uFF0C\u901A\u8FC7 get_pinterest_reference_selection \u8BFB\u53D6\u8BE5\u4F1A\u8BDD\uFF0C\u518D\u8BFB\u53D6\u539F\u56FE\u3002` }]
+      };
+    } catch (error2) {
+      reportInternalError("local panel start failed", error2);
+      return {
+        isError: true,
+        content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u65E0\u6CD5\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
+      };
     }
   }
 );
-server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => ({
-  contents: [
-    {
-      uri: PANEL_URI,
-      mimeType: "text/html;profile=mcp-app",
-      text: panelHtml,
-      _meta: {
-        ui: {
-          prefersBorder: false
-        }
-      }
-    }
-  ]
-}));
 server.registerTool(
-  "list_mock_pinterest_content",
+  "get_pinterest_reference_selection",
   {
-    title: "\u8BFB\u53D6 Pinterest \u539F\u578B\u6570\u636E",
-    description: "\u8FD4\u56DE\u672C\u5730 Pins \u4E0E Boards \u5047\u6570\u636E\u3002\u6B64\u5DE5\u5177\u53EA\u8BFB\uFF0C\u4E0D\u8FDE\u63A5 Pinterest\u3002",
+    title: "\u8BFB\u53D6\u5F53\u524D\u4EFB\u52A1\u7684 Pinterest \u53C2\u8003\u56FE",
+    description: "\u5F53\u7528\u6237\u8981\u6C42\u4F7F\u7528\u5DF2\u9009\u53C2\u8003\u56FE\u65F6\uFF0C\u4F20\u5165\u672C\u4EFB\u52A1 open_pinterest_inbox_web \u8FD4\u56DE\u7684 referenceSessionId\u3002\u6309\u7528\u6237\u6392\u5E8F\u8FD4\u56DE\u7ECF\u9A8C\u8BC1\u7684\u539F\u56FE\u8DEF\u5F84\u4E0E\u7F16\u53F7\uFF1B\u5FC5\u987B\u7EE7\u7EED\u8BFB\u53D6\u56FE\u7247\u540E\u624D\u80FD\u8FDB\u884C\u89C6\u89C9\u5206\u6790\u6216\u751F\u56FE\u3002\u4E0D\u8981\u521B\u5EFA\u65B0\u53C2\u8003\u7BEE\u6216\u731C\u6D4B\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD ID\u3002",
+    inputSchema: {
+      referenceSessionId: external_exports.string().regex(REFERENCE_SESSION_PATTERN),
+      expectedRevision: external_exports.number().int().min(0).optional()
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ referenceSessionId, expectedRevision }) => {
+    try {
+      const selected = await references.resolve(referenceSessionId, expectedRevision);
+      return {
+        structuredContent: selected,
+        content: [{ type: "text", text: `\u5DF2\u786E\u8BA4 ${selected.files.length} \u5F20\u53C2\u8003\u56FE\uFF08\u7248\u672C ${selected.revision}\uFF09\u3002\u8BF7\u6309\u987A\u5E8F\u8BFB\u53D6\u539F\u56FE\uFF1A
+${selected.files.map((file) => `${file.number}. ${file.title}
+${file.path}`).join("\n")}` }]
+      };
+    } catch (error2) {
+      return { isError: true, content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u53C2\u8003\u56FE\u6682\u65F6\u4E0D\u53EF\u8BFB\uFF0C\u8BF7\u5237\u65B0\u53C2\u8003\u7BEE\u540E\u91CD\u8BD5" }] };
+    }
+  }
+);
+server.registerTool(
+  "get_pinterest_inbox_web_status",
+  {
+    title: "\u67E5\u770B Pinterest Inbox \u7F51\u9875\u72B6\u6001",
+    description: "\u67E5\u770B\u5F53\u524D\u4EFB\u52A1\u4E2D\u7684 Pinterest Inbox \u672C\u5730\u7F51\u9875\u662F\u5426\u6B63\u5728\u8FD0\u884C\u3002",
     inputSchema: {},
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async () => {
+    const status = localPanelStop ? "stopping" : localPanel ? "running" : "stopped";
+    return {
+      structuredContent: {
+        status,
+        ...localPanel ? { url: localPanel.url, host: localPanel.host, port: localPanel.port } : {},
+        inbox: inbox.getSummary()
+      },
+      content: [{
+        type: "text",
+        text: status === "stopping" ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u505C\u6B62\u3002" : localPanel ? `Pinterest Inbox \u672C\u5730\u7F51\u9875\u6B63\u5728\u8FD0\u884C\uFF1A${localPanel.url}` : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5F53\u524D\u672A\u542F\u52A8\u3002"
+      }]
+    };
+  }
+);
+server.registerTool(
+  "stop_pinterest_inbox_web",
+  {
+    title: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875",
+    description: "\u505C\u6B62\u5F53\u524D\u4EFB\u52A1\u7684\u672C\u5730\u7F51\u9875\u670D\u52A1\uFF1BInbox \u76D1\u542C\u548C\u65E7 MCP \u9762\u677F\u4FDD\u6301\u53EF\u7528\u3002",
+    inputSchema: {},
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62"
     }
   },
-  async () => ({
-    structuredContent: getMockPanelData(),
-    content: [
-      {
-        type: "text",
-        text: "\u5DF2\u8BFB\u53D6\u672C\u5730 Pinterest \u539F\u578B\u6570\u636E\uFF1A8 \u4E2A Pin\uFF0C4 \u4E2A\u56FE\u7248\u3002\u672A\u8BBF\u95EE Pinterest\u3002"
-      }
-    ]
-  })
+  async () => {
+    try {
+      const stopped = await stopLocalPanel();
+      return {
+        structuredContent: { status: "stopped", wasRunning: stopped, inbox: inbox.getSummary() },
+        content: [{ type: "text", text: stopped ? "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u505C\u6B62\uFF1BInbox \u76D1\u542C\u4ECD\u5728\u8FD0\u884C\u3002" : "Pinterest Inbox \u672C\u5730\u7F51\u9875\u539F\u672C\u5C31\u672A\u542F\u52A8\u3002" }]
+      };
+    } catch (error2) {
+      reportInternalError("local panel stop failed", error2);
+      return { isError: true, content: [{ type: "text", text: "\u505C\u6B62 Pinterest Inbox \u672C\u5730\u7F51\u9875\u5931\u8D25\uFF1B\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" }] };
+    }
+  }
 );
 server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "\u6253\u5F00 Pinterest \u7D20\u6750\u680F\u539F\u578B",
-    description: "\u6E32\u67D3 Pins / Boards \u53CC\u5217\u7011\u5E03\u6D41\u539F\u578B\uFF0C\u7528\u4E8E\u9A8C\u8BC1 Codex \u4E2D\u7684\u7EC4\u4EF6\u4F4D\u7F6E\u4E0E\u4EA4\u4E92\u3002",
-    inputSchema: {},
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    },
+    title: "\u6253\u5F00 Pinterest Inbox \u65E7\u9762\u677F",
+    description: "\u6253\u5F00\u65E7\u7684\u5185\u5D4C MCP \u7D20\u6750\u9762\u677F\uFF0C\u4F5C\u4E3A\u672C\u5730\u7F51\u9875\u4E0D\u53EF\u7528\u65F6\u7684\u5DE5\u4F5C\u533A\u5BFC\u5165\u56DE\u6EDA\u65B9\u6848\u3002",
+    inputSchema: { workspaceRoot: external_exports.string().optional() },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
       ui: { resourceUri: PANEL_URI },
       "openai/outputTemplate": PANEL_URI,
-      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest \u7D20\u6750\u680F\u2026",
-      "openai/toolInvocation/invoked": "Pinterest \u7D20\u6750\u680F\u5DF2\u6253\u5F00"
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u6253\u5F00 Pinterest Inbox\u2026",
+      "openai/toolInvocation/invoked": "Pinterest Inbox \u5DF2\u6253\u5F00"
     }
   },
-  async () => ({
-    structuredContent: getMockPanelData(),
-    content: [
-      {
-        type: "text",
-        text: "Pinterest \u7D20\u6750\u680F\u539F\u578B\u5DF2\u6E32\u67D3\u3002\u5185\u5BB9\u4E3A\u672C\u5730\u5047\u6570\u636E\uFF0C\u4E0D\u4EE3\u8868\u771F\u5B9E\u8D26\u6237\u3002"
-      }
-    ]
-  })
+  async ({ workspaceRoot }) => panelResult({ ...workspaceRoot ? { workspaceRoot } : {}, registerWorkspace: true })
+);
+server.registerTool(
+  "import_pinterest_reference",
+  {
+    title: "\u5BFC\u5165 Pinterest \u53C2\u8003\u56FE",
+    description: "\u5C06 Pinterest Inbox \u4E2D\u660E\u786E\u9009\u4E2D\u7684\u4E00\u5F20\u5DF2\u7D22\u5F15\u56FE\u7247\u590D\u5236\u5230\u5F53\u524D\u5DE5\u4F5C\u533A references/pinterest \u76EE\u5F55\u3002",
+    inputSchema: { assetId: external_exports.string().min(1), workspaceToken: external_exports.string().min(1) },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    _meta: {
+      "openai/toolInvocation/invoking": "\u6B63\u5728\u5BFC\u5165\u53C2\u8003\u56FE\u2026",
+      "openai/toolInvocation/invoked": "\u53C2\u8003\u56FE\u5DF2\u5BFC\u5165"
+    }
+  },
+  async ({ assetId, workspaceToken }) => {
+    const asset = await inbox.resolveAsset(assetId);
+    if (!asset) return { isError: true, content: [{ type: "text", text: "\u672A\u627E\u5230\u8BE5 Inbox \u56FE\u7247\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5\u3002" }] };
+    try {
+      const imported = await workspaces.importAsset(asset, workspaceToken);
+      const optimizationNote = imported.optimization === "fallback" ? `\uFF08${imported.optimizationReason}\uFF09` : "\uFF08\u5DF2\u51C6\u5907\u8F7B\u91CF\u5F15\u7528\u7248\uFF09";
+      return {
+        structuredContent: { status: "imported", assetId, title: asset.title, boardTitle: asset.boardTitle, ...imported },
+        content: [{ type: "text", text: `\u5DF2\u5C06\u300C${asset.title}\u300D\u5BFC\u5165\u5DE5\u4F5C\u533A\uFF1A${imported.relativePath}${optimizationNote}` }]
+      };
+    } catch (error2) {
+      return { isError: true, content: [{ type: "text", text: error2 instanceof Error ? error2.message : String(error2) }] };
+    }
+  }
 );
 async function startServer() {
+  await inbox.start();
   const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const requestShutdown = () => {
+    void shutdown().catch((error2) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error2 instanceof Error ? error2.message : String(error2)}
+`);
+      process.exitCode = 1;
+      const forceExit = setTimeout(() => process.exit(1), 1e3);
+      forceExit.unref();
+    });
+  };
+  transport.onclose = requestShutdown;
+  process.stdin.once("end", requestShutdown);
+  process.stdin.once("close", requestShutdown);
+  try {
+    await server.connect(transport);
+  } catch (error2) {
+    process.stdin.off("end", requestShutdown);
+    process.stdin.off("close", requestShutdown);
+    await inbox.close();
+    throw error2;
+  }
 }
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+var shutdownPromise = null;
+async function shutdown() {
+  if (!shutdownPromise) {
+    shutdownPromise = (async () => {
+      try {
+        await stopLocalPanel();
+      } finally {
+        try {
+          await inbox.close();
+        } finally {
+          await server.close();
+        }
+      }
+    })();
+  }
+  return shutdownPromise;
+}
+function shutdownFromSignal() {
+  void shutdown().then(
+    () => process.exit(0),
+    (error2) => {
+      process.stderr.write(`[pinterest-reference-panel] shutdown failed: ${error2 instanceof Error ? error2.message : String(error2)}
+`);
+      process.exit(1);
+    }
+  );
+}
+process.once("SIGINT", shutdownFromSignal);
+process.once("SIGTERM", shutdownFromSignal);
+if (process.argv[1] && fileURLToPath2(import.meta.url) === process.argv[1]) {
   startServer().catch((error2) => {
-    const message = error2 instanceof Error ? error2.stack ?? error2.message : String(error2);
-    process.stderr.write(`[pinterest-reference-panel] ${message}
+    process.stderr.write(`[pinterest-reference-panel] ${error2 instanceof Error ? error2.stack ?? error2.message : String(error2)}
 `);
     process.exitCode = 1;
   });
 }
 export {
+  InboxService,
+  ReferenceError2 as ReferenceError,
+  ReferenceSessions,
+  WorkspaceRegistry,
+  inbox,
+  parseInboxFilename,
+  references,
   server,
-  startServer
+  startLocalPanelServer,
+  startServer,
+  workspaces,
+  writeTextToMacClipboard
 };
