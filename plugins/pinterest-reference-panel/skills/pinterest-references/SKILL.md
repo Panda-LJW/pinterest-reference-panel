@@ -1,13 +1,13 @@
 ---
 name: pinterest-references
-description: 启动 Pinterest Inbox 并在 Codex 右侧打开素材面板。当用户选择或提到此插件并要求打开或启动时使用，包括“打开项目”；也用于浏览、搜索与预览本地素材，以及读取当前任务选中的参考图。
+description: 启动 Pinterest BoardFlow 并在 Codex 右侧打开 Board 瀑布流素材看板。当用户选择或提到此插件并要求打开或启动时使用，包括“打开项目”；也用于 Pinterest 素材的浏览、搜索、预览和当前任务参考图读取。
 ---
 
-# Pinterest 参考素材
+# Pinterest BoardFlow 参考素材
 
 ## 打开与续用
 
-用户已经选择或提及 Pinterest Inbox 插件时，未另行指定对象的“打开”意图指向正在运行的素材面板。例如 `@Pinterest Inbox 打开项目` 应启动面板。只有用户明确要查看源码、文档或管理 Codex 项目时，才进入对应的开发/项目操作；此规则不接管其他项目的打开请求。
+用户已经选择或提及 Pinterest BoardFlow 插件时，未另行指定对象的“打开”意图指向正在运行的素材看板。例如 `@Pinterest BoardFlow 打开项目` 应启动看板。为兼容旧对话，`Pinterest Inbox` 也视为同一插件的旧称。只有用户明确要查看源码、文档或管理 Codex 项目时，才进入对应的开发/项目操作；此规则不接管其他项目的打开请求。
 
 打开面板需要完成两个动作：
 

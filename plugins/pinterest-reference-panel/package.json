@@ -1,8 +1,8 @@
 {
   "name": "pinterest-reference-panel",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
-  "description": "Local Pinterest Inbox browser panel for copying canonical image paths into Codex, with a legacy workspace-import fallback.",
+  "description": "Pinterest BoardFlow for Codex: a local Board-style masonry browser for selecting Pinterest visual references.",
   "type": "module",
   "scripts": {
     "build": "npm run check && esbuild src/server.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.bundle.js",

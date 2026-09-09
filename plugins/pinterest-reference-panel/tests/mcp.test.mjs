@@ -151,7 +151,7 @@ test("stdio MCP lists Inbox content and safely imports one indexed image", async
 
   const resource = await client.readResource({ uri: "ui://pinterest-reference-panel/panel.html" });
   assert.equal(resource.contents[0].mimeType, "text/html;profile=mcp-app");
-  assert.match(resource.contents[0].text, /Pinterest Inbox/);
+  assert.match(resource.contents[0].text, /Pinterest BoardFlow/);
 });
 
 test("stdio EOF shuts down an active local panel without waiting for a signal", async () => {
@@ -287,7 +287,7 @@ test("local panel startup errors are sanitized in MCP tool output", async () => 
     await client.connect(transport);
     const result = await client.callTool({ name: "open_pinterest_inbox_web", arguments: {} });
     assert.equal(result.isError, true);
-    assert.equal(result.content[0].text, "无法启动 Pinterest Inbox 本地网页；请检查插件安装后重试。");
+    assert.equal(result.content[0].text, "无法启动 Pinterest BoardFlow 本地网页；请检查插件安装后重试。");
     assert.equal(result.content[0].text.includes(inboxRoot), false);
     assert.equal(result.content[0].text.includes("70000"), false);
   } finally {

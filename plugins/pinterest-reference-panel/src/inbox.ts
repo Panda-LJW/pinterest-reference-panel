@@ -277,7 +277,7 @@ export class InboxService {
       return;
     }
     if (isWithin(canonicalInbox, canonicalStaging) || isWithin(canonicalStaging, canonicalInbox)) {
-      throw new Error("Pinterest Inbox 长期库与临时目录不能相互嵌套");
+      throw new Error("Pinterest BoardFlow 长期库与临时目录不能相互嵌套");
     }
 
     const sourceFiles = await walkImages(canonicalStaging);
@@ -485,7 +485,7 @@ export class InboxService {
     const thumbnailEntries = await mapWithConcurrency(page.assets, 4, async (asset) => {
       try {
         const thumbnail = await this.getThumbnail(asset.id);
-        if (!thumbnail) throw new Error("图片已离开 Pinterest Inbox 或不再可读");
+        if (!thumbnail) throw new Error("图片已离开 Pinterest BoardFlow 素材库或不再可读");
         return [asset.id, `data:${thumbnail.contentType};base64,${thumbnail.data.toString("base64")}`, null] as const;
       } catch (error) {
         return [asset.id, null, error instanceof Error ? error.message : String(error)] as const;

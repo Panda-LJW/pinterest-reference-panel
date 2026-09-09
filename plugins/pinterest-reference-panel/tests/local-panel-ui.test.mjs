@@ -154,7 +154,7 @@ test("refresh announces success after the new page is available", async () => {
     json: async () => path === "/api/refresh" ? { version: 1 } : { page: emptyPage }
   }));
   await harness.refreshNow();
-  assert.equal(harness.nodes.get("#toast").textContent, "Pinterest Inbox 已刷新");
+  assert.equal(harness.nodes.get("#toast").textContent, "Pinterest BoardFlow 已刷新");
   assert.equal(harness.state.offline, false);
   assert.equal(harness.state.refreshing, false);
 });
@@ -173,7 +173,7 @@ test("a superseded refresh page cannot announce success over the current view", 
   harness.state.tab = "boards";
   finishPage({ page: emptyPage });
   await refresh;
-  assert.notEqual(harness.nodes.get("#toast").textContent, "Pinterest Inbox 已刷新");
+  assert.notEqual(harness.nodes.get("#toast").textContent, "Pinterest BoardFlow 已刷新");
   assert.equal(harness.state.version, null);
   assert.equal(harness.state.refreshing, false);
 });

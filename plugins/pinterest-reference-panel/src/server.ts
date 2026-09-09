@@ -57,10 +57,10 @@ function reportInternalError(context: string, error: unknown) {
 }
 
 export const server = new McpServer(
-  { name: "pinterest-reference-panel", version: "0.4.0" },
+  { name: "pinterest-reference-panel", version: "0.4.1" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "When Pinterest Inbox is selected or mentioned, an unqualified request to open it (including 打开项目) means launch its running material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
+    instructions: "When Pinterest BoardFlow (formerly Pinterest Inbox) is selected or mentioned, an unqualified request to open it (including 打开项目) means launch its running Board-style masonry material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
   }
 );
 
@@ -98,7 +98,7 @@ async function panelResult(options: {
     if (summary.version === options.knownVersion) {
       return {
         structuredContent: { mode: "inbox" as const, unchanged: true, ...summary },
-        content: [{ type: "text" as const, text: "Pinterest Inbox 没有变化。" }],
+        content: [{ type: "text" as const, text: "Pinterest BoardFlow 没有变化。" }],
         _meta: { pinterestInbox: { thumbnails: {}, thumbnailErrors: {} } }
       };
     }
@@ -114,7 +114,7 @@ async function panelResult(options: {
     structuredContent: { ...pageResult.page, ...(publicWorkspace ? { workspace: publicWorkspace } : {}) },
     content: [{
       type: "text" as const,
-      text: `Pinterest Inbox 已读取 ${pageResult.page.total} 张图片。${workspace?.available ? `当前工作区：${workspace.name}。` : ""}`
+      text: `Pinterest BoardFlow 已读取 ${pageResult.page.total} 张图片。${workspace?.available ? `当前工作区：${workspace.name}。` : ""}`
     }],
     _meta: {
       pinterestInbox: {
@@ -135,7 +135,7 @@ server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => 
     text: panelHtml,
     _meta: {
       ui: { prefersBorder: false },
-      "openai/widgetDescription": "Pinterest Inbox 本地素材瀑布流，可将选中图片导入当前工作区。"
+      "openai/widgetDescription": "Pinterest BoardFlow 本地 Board 瀑布流看板，可将选中图片导入当前工作区。"
     }
   }]
 }));
@@ -143,7 +143,7 @@ server.registerResource("pinterest-reference-panel", PANEL_URI, {}, async () => 
 server.registerTool(
   "list_pinterest_inbox",
   {
-    title: "读取 Pinterest Inbox",
+    title: "读取 Pinterest BoardFlow",
     description: "分页读取本地 PinterestInbox 的图片与图版目录。",
     inputSchema: {
       cursor: z.string().optional(),
@@ -164,13 +164,13 @@ server.registerTool(
 server.registerTool(
   "open_pinterest_inbox_web",
   {
-    title: "启动 Pinterest Inbox 右侧素材面板",
-    description: "选择或提到 Pinterest Inbox 插件后要求打开/启动（如‘打开项目’）时调用。启动素材工作台后，继续调用 Codex open_in_codex，以 target.type=browser、target.url=返回的完整 URL、placement=right 显示到当前任务右侧。首次不传参数创建独立参考篮；保存 referenceSessionId，重开或读取选图时传回，不得借用其他任务的会话。只有明确要源码或文档时才打开文件。",
+    title: "启动 Pinterest BoardFlow 瀑布流看板",
+    description: "选择或提到 Pinterest BoardFlow（旧称 Pinterest Inbox）插件后要求打开/启动（如‘打开项目’）时调用。启动 Board 瀑布流素材看板后，继续调用 Codex open_in_codex，以 target.type=browser、target.url=返回的完整 URL、placement=right 显示到当前任务右侧。首次不传参数创建独立参考篮；保存 referenceSessionId，重开或读取选图时传回，不得借用其他任务的会话。只有明确要源码或文档时才打开文件。",
     inputSchema: { referenceSessionId: z.string().regex(REFERENCE_SESSION_PATTERN).optional() },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     _meta: {
-      "openai/toolInvocation/invoking": "正在启动 Pinterest Inbox 本地网页…",
-      "openai/toolInvocation/invoked": "Pinterest Inbox 本地网页已就绪"
+      "openai/toolInvocation/invoking": "正在启动 Pinterest BoardFlow…",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow 已就绪"
     }
   },
   async ({ referenceSessionId }) => {
@@ -180,13 +180,13 @@ server.registerTool(
       const url = `${handle.url}?ref=${id}`;
       return {
         structuredContent: { status: "running", url, referenceSessionId: id, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
-        content: [{ type: "text" as const, text: `Pinterest Inbox 服务已就绪：${url}。下一步必须调用 Codex open_in_codex：target={type:"browser",url:"${url}"}，placement="right"。服务就绪不等于面板已显示，请根据浏览器工具结果报告已打开或已排队。保留本任务的参考会话 ${id}。用户选图后，通过 get_pinterest_reference_selection 读取该会话，再读取原图。` }]
+        content: [{ type: "text" as const, text: `Pinterest BoardFlow 服务已就绪：${url}。下一步必须调用 Codex open_in_codex：target={type:"browser",url:"${url}"}，placement="right"。服务就绪不等于看板已显示，请根据浏览器工具结果报告已打开或已排队。保留本任务的参考会话 ${id}。用户选图后，通过 get_pinterest_reference_selection 读取该会话，再读取原图。` }]
       };
     } catch (error) {
       reportInternalError("local panel start failed", error);
       return {
         isError: true,
-        content: [{ type: "text" as const, text: error instanceof ReferenceError ? error.message : "无法启动 Pinterest Inbox 本地网页；请检查插件安装后重试。" }]
+        content: [{ type: "text" as const, text: error instanceof ReferenceError ? error.message : "无法启动 Pinterest BoardFlow 本地网页；请检查插件安装后重试。" }]
       };
     }
   }
@@ -219,8 +219,8 @@ server.registerTool(
 server.registerTool(
   "get_pinterest_inbox_web_status",
   {
-    title: "查看 Pinterest Inbox 网页状态",
-    description: "查看当前任务中的 Pinterest Inbox 本地网页是否正在运行。",
+    title: "查看 Pinterest BoardFlow 网页状态",
+    description: "查看当前任务中的 Pinterest BoardFlow 本地网页是否正在运行。",
     inputSchema: {},
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   },
@@ -235,10 +235,10 @@ server.registerTool(
       content: [{
         type: "text" as const,
         text: status === "stopping"
-          ? "Pinterest Inbox 本地网页正在停止。"
+          ? "Pinterest BoardFlow 本地网页正在停止。"
           : localPanel
-            ? `Pinterest Inbox 本地网页正在运行：${localPanel.url}`
-            : "Pinterest Inbox 本地网页当前未启动。"
+            ? `Pinterest BoardFlow 本地网页正在运行：${localPanel.url}`
+            : "Pinterest BoardFlow 本地网页当前未启动。"
       }]
     };
   }
@@ -247,13 +247,13 @@ server.registerTool(
 server.registerTool(
   "stop_pinterest_inbox_web",
   {
-    title: "停止 Pinterest Inbox 本地网页",
+    title: "停止 Pinterest BoardFlow 本地网页",
     description: "停止当前任务的本地网页服务；Inbox 监听和旧 MCP 面板保持可用。",
     inputSchema: {},
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
-      "openai/toolInvocation/invoking": "正在停止 Pinterest Inbox 本地网页…",
-      "openai/toolInvocation/invoked": "Pinterest Inbox 本地网页已停止"
+      "openai/toolInvocation/invoking": "正在停止 Pinterest BoardFlow 本地网页…",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow 本地网页已停止"
     }
   },
   async () => {
@@ -261,11 +261,11 @@ server.registerTool(
       const stopped = await stopLocalPanel();
       return {
         structuredContent: { status: "stopped", wasRunning: stopped, inbox: inbox.getSummary() },
-        content: [{ type: "text" as const, text: stopped ? "Pinterest Inbox 本地网页已停止；Inbox 监听仍在运行。" : "Pinterest Inbox 本地网页原本就未启动。" }]
+        content: [{ type: "text" as const, text: stopped ? "Pinterest BoardFlow 本地网页已停止；Inbox 监听仍在运行。" : "Pinterest BoardFlow 本地网页原本就未启动。" }]
       };
     } catch (error) {
       reportInternalError("local panel stop failed", error);
-      return { isError: true, content: [{ type: "text" as const, text: "停止 Pinterest Inbox 本地网页失败；请稍后重试。" }] };
+      return { isError: true, content: [{ type: "text" as const, text: "停止 Pinterest BoardFlow 本地网页失败；请稍后重试。" }] };
     }
   }
 );
@@ -273,15 +273,15 @@ server.registerTool(
 server.registerTool(
   "render_pinterest_reference_panel",
   {
-    title: "打开 Pinterest Inbox 旧面板",
+    title: "打开 Pinterest BoardFlow 旧面板",
     description: "打开旧的内嵌 MCP 素材面板，作为本地网页不可用时的工作区导入回滚方案。",
     inputSchema: { workspaceRoot: z.string().optional() },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {
       ui: { resourceUri: PANEL_URI },
       "openai/outputTemplate": PANEL_URI,
-      "openai/toolInvocation/invoking": "正在打开 Pinterest Inbox…",
-      "openai/toolInvocation/invoked": "Pinterest Inbox 已打开"
+      "openai/toolInvocation/invoking": "正在打开 Pinterest BoardFlow…",
+      "openai/toolInvocation/invoked": "Pinterest BoardFlow 已打开"
     }
   },
   async ({ workspaceRoot }) => panelResult({ ...(workspaceRoot ? { workspaceRoot } : {}), registerWorkspace: true })
@@ -291,7 +291,7 @@ server.registerTool(
   "import_pinterest_reference",
   {
     title: "导入 Pinterest 参考图",
-    description: "将 Pinterest Inbox 中明确选中的一张已索引图片复制到当前工作区 references/pinterest 目录。",
+    description: "将 Pinterest BoardFlow 中明确选中的一张已索引图片复制到当前工作区 references/pinterest 目录。",
     inputSchema: { assetId: z.string().min(1), workspaceToken: z.string().min(1) },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     _meta: {

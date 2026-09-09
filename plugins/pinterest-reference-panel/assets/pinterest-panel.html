@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pinterest Inbox</title>
+    <title>Pinterest BoardFlow</title>
     <style>
       :root {
         color-scheme: light dark;
@@ -232,11 +232,11 @@
       <div class="panel-chrome">
         <header class="topbar">
           <div class="brand">
-            <div class="brand-line"><span class="mark" aria-hidden="true">P</span><h1>Pinterest Inbox</h1></div>
+            <div class="brand-line"><span class="mark" aria-hidden="true">P</span><h1>Pinterest BoardFlow</h1></div>
             <div class="status-line"><span class="status-dot" id="status-dot"></span><span id="status-copy">正在连接本地 Inbox…</span></div>
           </div>
           <div class="toolbar">
-            <button class="icon-button" id="refresh" type="button" aria-label="刷新 Pinterest Inbox" title="刷新">
+            <button class="icon-button" id="refresh" type="button" aria-label="刷新 Pinterest BoardFlow" title="刷新">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 11a8.1 8.1 0 1 0-2.3 5.8"/><path d="M20 5v6h-6"/></svg>
             </button>
             <button class="icon-button" id="about" type="button" aria-label="查看说明" title="说明">
@@ -244,7 +244,7 @@
             </button>
           </div>
         </header>
-        <nav class="tabs" aria-label="Pinterest Inbox 内容类型" role="tablist">
+        <nav class="tabs" aria-label="Pinterest BoardFlow 内容类型" role="tablist">
           <button class="tab" type="button" role="tab" aria-selected="true" data-tab="pins">Pins</button>
           <button class="tab" type="button" role="tab" aria-selected="false" data-tab="boards">Boards</button>
         </nav>
@@ -518,9 +518,9 @@
           try {
             const result = await callTool("list_pinterest_inbox", { limit: 30, forceRescan });
             if (!acceptResult(result)) throw new Error("返回数据格式不正确");
-            if (forceRescan) showToast("Pinterest Inbox 已刷新");
+            if (forceRescan) showToast("Pinterest BoardFlow 已刷新");
           } catch (error) {
-            showToast(error instanceof Error ? error.message : "无法读取 Pinterest Inbox");
+            showToast(error instanceof Error ? error.message : "无法读取 Pinterest BoardFlow");
           } finally { refreshButton.classList.remove("loading"); }
         }
 
@@ -553,7 +553,7 @@
         if (initialMeta?.stagingPath) state.stagingPath = initialMeta.stagingPath;
         if (window.openai?.toolOutput) acceptResult(window.openai.toolOutput);
         render();
-        request("ui/initialize", { appInfo: { name: "Pinterest Inbox", version: "0.4.0" }, appCapabilities: {} }).catch(() => {});
+        request("ui/initialize", { appInfo: { name: "Pinterest BoardFlow", version: "0.4.1" }, appCapabilities: {} }).catch(() => {});
         setInterval(() => void poll(), 2000);
       })();
     </script>

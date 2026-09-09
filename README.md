@@ -1,12 +1,14 @@
-# Pinterest Inbox for Codex
+# Pinterest BoardFlow for Codex
 
-一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件在本机回环地址提供 Pins / Boards 瀑布流；点击素材即可复制长期库原文件的真实绝对路径，再粘贴到当前对话供 Codex 引用。
+**Pinterest 下载器 · Board 瀑布流看板 · Codex 视觉参考插件**
 
-当前状态：**首个公开版本 0.4.0 已完成发布验收**。仓库与 Codex 插件版本为 `0.4.0`，随附的 Chrome 下载器独立版本为 `0.4.2`。
+一个面向 **macOS + Chrome** 的本地视觉参考工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件在本机回环地址提供 Pins / Boards 瀑布流看板；点击素材即可复制长期库原文件的真实绝对路径，也可以把有序参考篮直接交给 Codex 使用。
+
+当前状态：**0.4.1 品牌更新已发布**。仓库与 Codex 插件版本为 `0.4.1`，随附的 Chrome 下载器独立版本为 `0.4.3`。本次只更新公开名称与说明，内部插件 ID `pinterest-reference-panel`、MCP 工具名和 `PinterestInbox` 目录保持不变，现有安装与素材兼容。
 
 2026-09-09 已在真实登录态 Pinterest、Chrome 0.4.2 扩展和 Codex 可见内嵌浏览器中完成端到端检查：连续点击 3 张不同图片并立即重复点击其中一张，最终只保存 3 张；多选 6 张后立即取消，最终保存 0 张、跳过 6 张；在 Codex 素材栏选择 3 张后，同一 `referenceSessionId` 经 MCP 返回相同顺序的原文件，Codex 已实际读取三张原图。批量复制的三条路径与系统剪贴板逐字节一致，包含中文文件名。自动测试共 95/95 通过，生产依赖与完整依赖审计均为 0 个已知漏洞。
 
-使用方法：在加载插件的新任务中说“打开 Pinterest Inbox”，点击图片预览，用 ＋ 选择 2–3 张；回到该任务说“使用选中的参考图，按顺序分析”。Codex 会读取该任务的有序原图列表，再实际查看原图。重新打开同一参考篮应复用原会话，另一个任务会创建空篮；插件进程重启后需要重新选图。主流程的设计与边界见 [SPEC](SPEC.md) 和 [UX 方案](docs/UX-PLAN.md)，验证与变更证据见 [LOG](LOG.md)。
+使用方法：在加载插件的新任务中说“打开 Pinterest BoardFlow”，点击图片预览，用 ＋ 选择 2–3 张；回到该任务说“使用选中的参考图，按顺序分析”。Codex 会读取该任务的有序原图列表，再实际查看原图。重新打开同一参考篮应复用原会话，另一个任务会创建空篮；插件进程重启后需要重新选图。主流程的设计与边界见 [SPEC](SPEC.md) 和 [UX 方案](docs/UX-PLAN.md)，验证与变更证据见 [LOG](LOG.md)。
 
 素材工作台支持完整素材库搜索、图版筛选、三种排序、原图预览、系统深色、键盘翻图、最多 10 张的有序参考篮，以及单张/批量路径复制。宿主是否固定显示在右侧由 Codex 布局能力决定；若自动打开请求只进入排队状态，可在 Codex 的可见内嵌浏览器中打开工具返回的本地 URL。
 
@@ -41,13 +43,13 @@
 3. 点击“加载已解压的扩展程序”；
 4. 选择 `extensions/pinterest-inbox-downloader/`。
 
-打开 Pinterest 后，右上方会出现 Pinterest Inbox 控制面板。默认“单张模式”会拦截普通 Pin 单击并下载，默认保存质量是“智能轻量”；需要正常打开 Pin 时，点击面板上的“暂停”即可。多选与整板模式会显示成功、跳过、无 originals 原图、图片处理失败和待处理数量。
+打开 Pinterest 后，右上方会出现 Pinterest BoardFlow 控制面板。默认“单张模式”会拦截普通 Pin 单击并下载，默认保存质量是“智能轻量”；需要正常打开 Pin 时，点击面板上的“暂停”即可。多选与整板模式会显示成功、跳过、无 originals 原图、图片处理失败和待处理数量。
 
 ## 安装 Codex 插件
 
 ```bash
-git clone https://github.com/Panda-LJW/pinterest-reference-panel.git
-cd pinterest-reference-panel
+git clone https://github.com/Panda-LJW/pinterest-boardflow-for-codex.git
+cd pinterest-boardflow-for-codex
 npm ci
 npm test
 codex plugin marketplace add "$PWD"

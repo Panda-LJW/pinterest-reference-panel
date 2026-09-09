@@ -73,7 +73,7 @@ test("local panel is loopback-only, session protected, and copies only a resolve
     assert.equal(panel.host, "127.0.0.1");
     assert.match(panel.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
     const session = await openSession(panel.url);
-    assert.match(session.html, /Pinterest Inbox/);
+    assert.match(session.html, /Pinterest BoardFlow/);
 
     const rootResponse = await fetch(panel.url);
     assert.equal(rootResponse.headers.get("access-control-allow-origin"), null);

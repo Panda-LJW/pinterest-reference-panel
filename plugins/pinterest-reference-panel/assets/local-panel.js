@@ -422,7 +422,7 @@ async function refreshNow() {
     mergeSummary(result, false); clearThumbnailCache();
     const loaded = await loadPage({ reset: true });
     if (referenceSessionId) await loadSelection();
-    if (loaded) showToast("Pinterest Inbox 已刷新");
+    if (loaded) showToast("Pinterest BoardFlow 已刷新");
   } catch (error) { state.offline = true; showToast(error.message || "刷新失败", true); }
   finally { state.refreshing = false; updateChrome(); }
 }
@@ -682,7 +682,7 @@ window.addEventListener("beforeunload", () => {
 });
 if (!token) {
   state.initialLoading = false; state.offline = true;
-  elements.content.replaceChildren(emptyState("本地面板会话无效", "请从 Pinterest Inbox 插件重新打开。"));
+  elements.content.replaceChildren(emptyState("本地面板会话无效", "请从 Pinterest BoardFlow 插件重新打开。"));
   updateChrome();
 } else {
   renderSelection();

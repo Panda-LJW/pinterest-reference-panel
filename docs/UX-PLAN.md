@@ -1,4 +1,4 @@
-# Pinterest Inbox 体验改造 · 2026-09-06
+# Pinterest BoardFlow 体验改造 · 2026-09-06
 
 状态：用户已确认整体方案，并补充要求同步改造 UI。上一轮未提交的局部优化已保留；施工前快照位于 `output/ux-20260906/before/`。
 

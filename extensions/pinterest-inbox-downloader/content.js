@@ -44,8 +44,8 @@
       @media(prefers-color-scheme:dark){:host{--paper:#232421;--surface:#2b2d29;--ink:#eeeeea;--muted:#a2a69b;--line:#3f423a;--soft:#32352e;--red:#ff647e;--tint:#422930;color-scheme:dark}.actions .primary{color:#251b1d}}
       @media(max-width:340px){.panel{padding:12px}.title{font-size:12px}.mark{width:26px;height:26px}.head{gap:4px}.sub{max-width:115px}.power{padding:5px}.head-actions{gap:3px}}
     </style>
-    <section class="panel" aria-label="Pinterest Inbox 下载器">
-      <div class="head"><div class="identity"><span class="mark" aria-hidden="true">P</span><div><div class="title">Pinterest Inbox</div><div id="qualitySummary" class="sub">智能轻量 · 就绪</div></div></div><div class="head-actions"><button id="toggleEnabled" class="power" aria-pressed="true" aria-label="暂停 Pinterest Inbox 采集">暂停</button><button id="collapse" class="collapse" aria-label="收起面板" aria-expanded="true" aria-controls="body" title="收起面板"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 10 4-4 4 4"/></svg></button></div></div>
+    <section class="panel" aria-label="Pinterest BoardFlow 下载器">
+      <div class="head"><div class="identity"><span class="mark" aria-hidden="true">P</span><div><div class="title">Pinterest BoardFlow</div><div id="qualitySummary" class="sub">智能轻量 · 就绪</div></div></div><div class="head-actions"><button id="toggleEnabled" class="power" aria-pressed="true" aria-label="暂停 Pinterest BoardFlow 采集">暂停</button><button id="collapse" class="collapse" aria-label="收起面板" aria-expanded="true" aria-controls="body" title="收起面板"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 10 4-4 4 4"/></svg></button></div></div>
       <div id="body" class="body"><div id="controls">
         <div class="modes" role="group" aria-label="图片选择方式"><button id="quick" class="active" aria-pressed="true">单张下载</button><button id="multi" aria-pressed="false">多选下载</button></div>
         <p id="modeHint" class="hint">连续点击图片加入队列，按顺序下载；⌘ / Ctrl 点击打开原页面。</p>
@@ -428,7 +428,7 @@
     controls.hidden = !enabled;
     toggleEnabledButton.textContent = enabled ? "暂停" : "启用";
     toggleEnabledButton.setAttribute("aria-pressed", String(enabled));
-    toggleEnabledButton.setAttribute("aria-label", enabled ? "暂停 Pinterest Inbox 采集" : "启用 Pinterest Inbox 采集");
+    toggleEnabledButton.setAttribute("aria-label", enabled ? "暂停 Pinterest BoardFlow 采集" : "启用 Pinterest BoardFlow 采集");
     document.documentElement.setAttribute("data-pinterest-inbox-enabled", String(enabled));
     if (enabled) {
       setBusy(scanningBoard || Boolean(currentJobId));
