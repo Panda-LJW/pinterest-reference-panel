@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-09-10 — GitHub README 界面展示图
+
+- 任务目标：为首个公开版的 README 增加更有吸引力的主视觉与功能模块截图，让访问者能快速看懂“Pinterest 下载 → 本地整理 → Board 瀑布流 → Codex 有序参考”的完整流程。
+- 修改文件：更新 `README.md`；新增 `docs/images/boardflow-hero.png`、`boardflow-downloader.png`、`boardflow-downloader-panel.png`、`boardflow-dashboard.png`、`boardflow-boards.png` 和 `boardflow-preview.png`。
+- 关键决策：截图使用当前生产版本的本地面板与 Chrome 扩展界面，通过本地 mock API 只注入合成的抽象视觉素材；不使用用户 Pinterest 账号、私人 Board、真实收藏、真实下载记录或本机文件路径。README 显式声明该边界，图片不内嵌可识别用户的文本元数据。
+- 验证结果：用 Playwright 在 1280px 与 1600px 实际浏览器视口生成并逐张检查 6 张 PNG；尺寸与类型检查通过，README 中的图片路径均指向已存在文件，`git diff --check` 通过。根 `npm test` 完整通过：Codex 插件 62/62、Chrome 下载器 33/33，共 95/95。
+- 未解决事项：需在推送后检查 GitHub README 的实际排版与图片加载；本轮不改动运行时功能或版本号。
+- 回滚提示：回退 README 展示区并删除本轮 6 张 `boardflow-*.png` 即可；不影响插件、Chrome 扩展或用户素材库。
+
 ## 2026-09-09 — Pinterest BoardFlow 公开品牌更新
 
 - 任务目标：将公开名称更新为更易理解和传播的 **Pinterest BoardFlow for Codex**，同时在仓库、Codex 插件和 Chrome 扩展中明确表达 Pinterest 下载器、Board 瀑布流看板与 Codex 视觉参考插件三项核心能力。
