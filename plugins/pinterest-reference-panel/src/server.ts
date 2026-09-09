@@ -7,10 +7,12 @@ import { z } from "zod";
 import { InboxService } from "./inbox.js";
 import { startLocalPanelServer, type LocalPanelServerHandle } from "./local-panel-server.js";
 import { WorkspaceRegistry } from "./workspace.js";
+import { ReferenceError, ReferenceSessions, REFERENCE_SESSION_PATTERN } from "./references.js";
 
 export { InboxService, parseInboxFilename } from "./inbox.js";
 export { startLocalPanelServer, writeTextToMacClipboard } from "./local-panel-server.js";
 export { WorkspaceRegistry } from "./workspace.js";
+export { ReferenceSessions, ReferenceError } from "./references.js";
 
 const PANEL_URI = "ui://pinterest-reference-panel/panel.html";
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
@@ -18,6 +20,7 @@ const panelHtml = readFileSync(join(moduleDirectory, "../assets/pinterest-panel.
 
 export const inbox = new InboxService();
 export const workspaces = new WorkspaceRegistry();
+export const references = new ReferenceSessions(inbox);
 let localPanel: LocalPanelServerHandle | null = null;
 let localPanelStart: Promise<LocalPanelServerHandle> | null = null;
 let localPanelStop: Promise<boolean> | null = null;
@@ -27,7 +30,7 @@ async function ensureLocalPanel() {
   if (localPanel) return localPanel;
   if (!localPanelStart) {
     const configuredPort = process.env.PINTEREST_PANEL_PORT ? Number(process.env.PINTEREST_PANEL_PORT) : 0;
-    localPanelStart = startLocalPanelServer({ inbox, port: configuredPort }).then((handle) => {
+    localPanelStart = startLocalPanelServer({ inbox, references, port: configuredPort }).then((handle) => {
       localPanel = handle;
       return handle;
     }).finally(() => { localPanelStart = null; });
@@ -57,7 +60,7 @@ export const server = new McpServer(
   { name: "pinterest-reference-panel", version: "0.4.0" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "Use open_pinterest_inbox_web as the primary experience: open its loopback URL in the Codex in-app browser, then let the user click an indexed image to copy its canonical absolute path and paste it into the conversation. Do not auto-send a message, re-encode, copy, or modify the selected source. The embedded workspace-import panel remains a legacy fallback only. Never accept arbitrary source URLs or paths."
+    instructions: "When Pinterest Inbox is selected or mentioned, an unqualified request to open it (including 打开项目) means launch its running material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
   }
 );
 
@@ -161,28 +164,54 @@ server.registerTool(
 server.registerTool(
   "open_pinterest_inbox_web",
   {
-    title: "打开 Pinterest Inbox 本地网页",
-    description: "启动只绑定本机回环地址的 Pinterest Inbox 瀑布流网页，并返回可在 Codex 内嵌浏览器中打开的 URL。",
-    inputSchema: {},
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    title: "启动 Pinterest Inbox 右侧素材面板",
+    description: "选择或提到 Pinterest Inbox 插件后要求打开/启动（如‘打开项目’）时调用。启动素材工作台后，继续调用 Codex open_in_codex，以 target.type=browser、target.url=返回的完整 URL、placement=right 显示到当前任务右侧。首次不传参数创建独立参考篮；保存 referenceSessionId，重开或读取选图时传回，不得借用其他任务的会话。只有明确要源码或文档时才打开文件。",
+    inputSchema: { referenceSessionId: z.string().regex(REFERENCE_SESSION_PATTERN).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     _meta: {
       "openai/toolInvocation/invoking": "正在启动 Pinterest Inbox 本地网页…",
       "openai/toolInvocation/invoked": "Pinterest Inbox 本地网页已就绪"
     }
   },
-  async () => {
+  async ({ referenceSessionId }) => {
     try {
       const handle = await ensureLocalPanel();
+      const id = referenceSessionId ? references.require(referenceSessionId).id : references.create();
+      const url = `${handle.url}?ref=${id}`;
       return {
-        structuredContent: { status: "running", url: handle.url, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
-        content: [{ type: "text" as const, text: `Pinterest Inbox 本地网页已启动：${handle.url}。请在 Codex 内嵌浏览器右侧打开此地址。` }]
+        structuredContent: { status: "running", url, referenceSessionId: id, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
+        content: [{ type: "text" as const, text: `Pinterest Inbox 服务已就绪：${url}。下一步必须调用 Codex open_in_codex：target={type:"browser",url:"${url}"}，placement="right"。服务就绪不等于面板已显示，请根据浏览器工具结果报告已打开或已排队。保留本任务的参考会话 ${id}。用户选图后，通过 get_pinterest_reference_selection 读取该会话，再读取原图。` }]
       };
     } catch (error) {
       reportInternalError("local panel start failed", error);
       return {
         isError: true,
-        content: [{ type: "text" as const, text: "无法启动 Pinterest Inbox 本地网页；请检查插件安装后重试。" }]
+        content: [{ type: "text" as const, text: error instanceof ReferenceError ? error.message : "无法启动 Pinterest Inbox 本地网页；请检查插件安装后重试。" }]
       };
+    }
+  }
+);
+
+server.registerTool(
+  "get_pinterest_reference_selection",
+  {
+    title: "读取当前任务的 Pinterest 参考图",
+    description: "当用户要求使用已选参考图时，传入本任务 open_pinterest_inbox_web 返回的 referenceSessionId。按用户排序返回经验证的原图路径与编号；必须继续读取图片后才能进行视觉分析或生图。不要创建新参考篮或猜测其他任务的会话 ID。",
+    inputSchema: {
+      referenceSessionId: z.string().regex(REFERENCE_SESSION_PATTERN),
+      expectedRevision: z.number().int().min(0).optional()
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ referenceSessionId, expectedRevision }) => {
+    try {
+      const selected = await references.resolve(referenceSessionId, expectedRevision);
+      return {
+        structuredContent: selected,
+        content: [{ type: "text" as const, text: `已确认 ${selected.files.length} 张参考图（版本 ${selected.revision}）。请按顺序读取原图：\n${selected.files.map(file => `${file.number}. ${file.title}\n${file.path}`).join("\n")}` }]
+      };
+    } catch (error) {
+      return { isError: true, content: [{ type: "text" as const, text: error instanceof ReferenceError ? error.message : "参考图暂时不可读，请刷新参考篮后重试" }] };
     }
   }
 );

@@ -405,11 +405,11 @@ var require_codegen = __commonJS({
         const rhs = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
         return `${varKind} ${this.name}${rhs};` + _n;
       }
-      optimizeNames(names, constants3) {
+      optimizeNames(names, constants4) {
         if (!names[this.name.str])
           return;
         if (this.rhs)
-          this.rhs = optimizeExpr(this.rhs, names, constants3);
+          this.rhs = optimizeExpr(this.rhs, names, constants4);
         return this;
       }
       get names() {
@@ -426,10 +426,10 @@ var require_codegen = __commonJS({
       render({ _n }) {
         return `${this.lhs} = ${this.rhs};` + _n;
       }
-      optimizeNames(names, constants3) {
+      optimizeNames(names, constants4) {
         if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
           return;
-        this.rhs = optimizeExpr(this.rhs, names, constants3);
+        this.rhs = optimizeExpr(this.rhs, names, constants4);
         return this;
       }
       get names() {
@@ -490,8 +490,8 @@ var require_codegen = __commonJS({
       optimizeNodes() {
         return `${this.code}` ? this : void 0;
       }
-      optimizeNames(names, constants3) {
-        this.code = optimizeExpr(this.code, names, constants3);
+      optimizeNames(names, constants4) {
+        this.code = optimizeExpr(this.code, names, constants4);
         return this;
       }
       get names() {
@@ -520,12 +520,12 @@ var require_codegen = __commonJS({
         }
         return nodes.length > 0 ? this : void 0;
       }
-      optimizeNames(names, constants3) {
+      optimizeNames(names, constants4) {
         const { nodes } = this;
         let i = nodes.length;
         while (i--) {
           const n = nodes[i];
-          if (n.optimizeNames(names, constants3))
+          if (n.optimizeNames(names, constants4))
             continue;
           subtractNames(names, n.names);
           nodes.splice(i, 1);
@@ -578,12 +578,12 @@ var require_codegen = __commonJS({
           return void 0;
         return this;
       }
-      optimizeNames(names, constants3) {
+      optimizeNames(names, constants4) {
         var _a;
-        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants3);
-        if (!(super.optimizeNames(names, constants3) || this.else))
+        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants4);
+        if (!(super.optimizeNames(names, constants4) || this.else))
           return;
-        this.condition = optimizeExpr(this.condition, names, constants3);
+        this.condition = optimizeExpr(this.condition, names, constants4);
         return this;
       }
       get names() {
@@ -606,10 +606,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.iteration})` + super.render(opts);
       }
-      optimizeNames(names, constants3) {
-        if (!super.optimizeNames(names, constants3))
+      optimizeNames(names, constants4) {
+        if (!super.optimizeNames(names, constants4))
           return;
-        this.iteration = optimizeExpr(this.iteration, names, constants3);
+        this.iteration = optimizeExpr(this.iteration, names, constants4);
         return this;
       }
       get names() {
@@ -645,10 +645,10 @@ var require_codegen = __commonJS({
       render(opts) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
       }
-      optimizeNames(names, constants3) {
-        if (!super.optimizeNames(names, constants3))
+      optimizeNames(names, constants4) {
+        if (!super.optimizeNames(names, constants4))
           return;
-        this.iterable = optimizeExpr(this.iterable, names, constants3);
+        this.iterable = optimizeExpr(this.iterable, names, constants4);
         return this;
       }
       get names() {
@@ -690,11 +690,11 @@ var require_codegen = __commonJS({
         (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
         return this;
       }
-      optimizeNames(names, constants3) {
+      optimizeNames(names, constants4) {
         var _a, _b;
-        super.optimizeNames(names, constants3);
-        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants3);
-        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants3);
+        super.optimizeNames(names, constants4);
+        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants4);
+        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants4);
         return this;
       }
       get names() {
@@ -995,7 +995,7 @@ var require_codegen = __commonJS({
     function addExprNames(names, from) {
       return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
     }
-    function optimizeExpr(expr, names, constants3) {
+    function optimizeExpr(expr, names, constants4) {
       if (expr instanceof code_1.Name)
         return replaceName(expr);
       if (!canOptimize(expr))
@@ -1010,14 +1010,14 @@ var require_codegen = __commonJS({
         return items;
       }, []));
       function replaceName(n) {
-        const c = constants3[n.str];
+        const c = constants4[n.str];
         if (c === void 0 || names[n.str] !== 1)
           return n;
         delete names[n.str];
         return c;
       }
       function canOptimize(e) {
-        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants3[c.str] !== void 0);
+        return e instanceof code_1._Code && e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants4[c.str] !== void 0);
       }
     }
     function subtractNames(names, from) {
@@ -3104,9 +3104,28 @@ var require_utils = __commonJS({
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
+    var isPort = RegExp.prototype.test.bind(/^\d*$/u);
     var isHexPair = RegExp.prototype.test.bind(/^[\da-f]{2}$/iu);
     var isUnreserved = RegExp.prototype.test.bind(/^[\da-z\-._~]$/iu);
-    var isPathCharacter = RegExp.prototype.test.bind(/^[\da-z\-._~!$&'()*+,;=:@/]$/iu);
+    var isPathCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/]$/u);
+    var isQueryFragmentCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:@/?]$/u);
+    var isUserinfoCharacter = RegExp.prototype.test.bind(/^[A-Za-z0-9\-._~!$&'()*+,;=:]$/u);
+    var BYTE_HEX = new Array(256);
+    {
+      const HEX_DIGITS = "0123456789ABCDEF";
+      for (let i = 0; i < 256; i++) {
+        BYTE_HEX[i] = "%" + HEX_DIGITS[i >> 4] + HEX_DIGITS[i & 15];
+      }
+    }
+    function percentEncodeNonAscii(cp) {
+      if (cp < 2048) {
+        return BYTE_HEX[192 | cp >> 6] + BYTE_HEX[128 | cp & 63];
+      }
+      if (cp < 65536) {
+        return BYTE_HEX[224 | cp >> 12] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+      }
+      return BYTE_HEX[240 | cp >> 18] + BYTE_HEX[128 | cp >> 12 & 63] + BYTE_HEX[128 | cp >> 6 & 63] + BYTE_HEX[128 | cp & 63];
+    }
     function stringArrayToHexStripped(input) {
       let acc = "";
       let code = 0;
@@ -3131,91 +3150,105 @@ var require_utils = __commonJS({
       }
       return acc;
     }
+    var isHextet = RegExp.prototype.test.bind(/^[\dA-Fa-f]{1,4}$/);
+    var isIPvFuture = RegExp.prototype.test.bind(/^[vV][\dA-Fa-f]+\.[A-Za-z\d\-._~!$&'()*+,;=:]+$/);
+    var isZoneCharacter = RegExp.prototype.test.bind(/^[A-Za-z\d\-._~]$/);
     var nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-    function consumeIsZone(buffer) {
-      buffer.length = 0;
-      return true;
-    }
-    function consumeHextets(buffer, address, output) {
-      if (buffer.length) {
-        const hex = stringArrayToHexStripped(buffer);
-        if (hex !== "") {
-          address.push(hex);
-        } else {
-          output.error = true;
-          return false;
+    function isZoneIdentifier(zone) {
+      if (zone.length === 0) return false;
+      for (let i = 0; i < zone.length; i++) {
+        if (isZoneCharacter(zone[i])) continue;
+        if (zone[i] === "%" && i + 2 < zone.length && isHexPair(zone.slice(i + 1, i + 3))) {
+          i += 2;
+          continue;
         }
-        buffer.length = 0;
+        return false;
       }
       return true;
     }
-    function getIPV6(input) {
-      let tokenCount = 0;
-      const output = { error: false, address: "", zone: "" };
-      const address = [];
-      const buffer = [];
-      let endipv6Encountered = false;
-      let endIpv6 = false;
-      let consume = consumeHextets;
-      for (let i = 0; i < input.length; i++) {
-        const cursor = input[i];
-        if (cursor === "[" || cursor === "]") {
-          continue;
-        }
-        if (cursor === ":") {
-          if (endipv6Encountered === true) {
-            endIpv6 = true;
+    function compressIPv6ZeroRun(hextets) {
+      let bestStart = -1;
+      let bestLength = 0;
+      let runStart = -1;
+      let runLength = 0;
+      for (let i = 0; i < hextets.length; i++) {
+        if (hextets[i] === "0") {
+          if (runStart === -1) runStart = i;
+          runLength++;
+          if (runLength > bestLength) {
+            bestLength = runLength;
+            bestStart = runStart;
           }
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          if (++tokenCount > 7) {
-            output.error = true;
-            break;
-          }
-          if (i > 0 && input[i - 1] === ":") {
-            endipv6Encountered = true;
-          }
-          address.push(":");
-          continue;
-        } else if (cursor === "%") {
-          if (!consume(buffer, address, output)) {
-            break;
-          }
-          consume = consumeIsZone;
         } else {
-          buffer.push(cursor);
-          continue;
+          runStart = -1;
+          runLength = 0;
         }
       }
-      if (buffer.length) {
-        if (consume === consumeIsZone) {
-          output.zone = buffer.join("");
-        } else if (endIpv6) {
-          address.push(buffer.join(""));
-        } else {
-          address.push(stringArrayToHexStripped(buffer));
-        }
+      if (bestLength < 2) return hextets.join(":");
+      const head = hextets.slice(0, bestStart).join(":");
+      const tail = hextets.slice(bestStart + bestLength).join(":");
+      return head + "::" + tail;
+    }
+    function normalizeIPv6Address(input) {
+      const compression = input.indexOf("::");
+      if (compression !== -1 && input.indexOf("::", compression + 1) !== -1) return void 0;
+      const left = compression === -1 ? input.split(":") : input.slice(0, compression).split(":");
+      const right = compression === -1 ? [] : input.slice(compression + 2).split(":");
+      if (compression !== -1) {
+        if (left.length === 1 && left[0] === "") left.length = 0;
+        if (right.length === 1 && right[0] === "") right.length = 0;
       }
-      output.address = address.join("");
-      return output;
+      const parts = left.concat(right);
+      let hextetCount = 0;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part === "") return void 0;
+        if (part.indexOf(".") !== -1) {
+          if (i !== parts.length - 1 || compression !== -1 && right.length === 0 || !isIPv4(part)) return void 0;
+          hextetCount += 2;
+          continue;
+        }
+        if (!isHextet(part)) return void 0;
+        parts[i] = parseInt(part, 16).toString(16);
+        hextetCount++;
+      }
+      if (compression === -1) {
+        if (hextetCount !== 8) return void 0;
+        return compressIPv6ZeroRun(parts);
+      }
+      if (hextetCount >= 8) return void 0;
+      const expanded = parts.slice(0, left.length);
+      for (let i = hextetCount; i < 8; i++) expanded.push("0");
+      for (let i = left.length; i < parts.length; i++) expanded.push(parts[i]);
+      return compressIPv6ZeroRun(expanded);
     }
     function normalizeIPv6(host) {
-      if (findToken(host, ":") < 2) {
-        return { host, isIPV6: false };
+      const bracketed = host[0] === "[" && host[host.length - 1] === "]";
+      const hasBracket = host[0] === "[" || host[host.length - 1] === "]";
+      if (hasBracket && !bracketed) return { host, isIPV6: false, error: true };
+      let input = bracketed ? host.slice(1, -1) : host;
+      if (bracketed && isIPvFuture(input)) {
+        input = input.toLowerCase();
+        return { host: `[${input}]`, escapedHost: input, isIPV6: false, isIPVFuture: true };
       }
-      const ipv62 = getIPV6(host);
-      if (!ipv62.error) {
-        let newHost = ipv62.address;
-        let escapedHost = ipv62.address;
-        if (ipv62.zone) {
-          newHost += "%" + ipv62.zone;
-          escapedHost += "%25" + ipv62.zone;
-        }
-        return { host: newHost, isIPV6: true, escapedHost };
-      } else {
-        return { host, isIPV6: false };
+      if (findToken(input, ":") < 2) {
+        return { host, isIPV6: false, error: bracketed };
       }
+      let zoneIdentifier = "";
+      const zoneSeparator = input.indexOf("%");
+      if (zoneSeparator !== -1) {
+        const separatorLength = input.slice(zoneSeparator, zoneSeparator + 3).toLowerCase() === "%25" ? 3 : 1;
+        zoneIdentifier = input.slice(zoneSeparator + separatorLength);
+        if (!isZoneIdentifier(zoneIdentifier)) return { host, isIPV6: false, error: true };
+        input = input.slice(0, zoneSeparator);
+      }
+      const address = normalizeIPv6Address(input);
+      if (address === void 0) return { host, isIPV6: false, error: true };
+      return {
+        host: address + (zoneIdentifier ? "%" + zoneIdentifier : ""),
+        escapedHost: address + (zoneIdentifier ? "%25" + zoneIdentifier : ""),
+        isIPV6: true
+      };
     }
     function findToken(str, token) {
       let ind = 0;
@@ -3334,7 +3367,8 @@ var require_utils = __commonJS({
     function normalizePathEncoding(input) {
       let output = "";
       for (let i = 0; i < input.length; i++) {
-        if (input[i] === "%" && i + 2 < input.length) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
           const hex = input.slice(i + 1, i + 3);
           if (isHexPair(hex)) {
             const normalizedHex = hex.toUpperCase();
@@ -3348,10 +3382,152 @@ var require_utils = __commonJS({
             continue;
           }
         }
-        if (isPathCharacter(input[i])) {
-          output += input[i];
+        if (isPathCharacter(ch)) {
+          output += ch;
         } else {
-          output += escape(input[i]);
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function serializePathEncoding(input, pathNoScheme = false) {
+      let output = "";
+      let firstSegment = pathNoScheme && input[0] !== "/";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (ch === "/") {
+          firstSegment = false;
+        }
+        if (isPathCharacter(ch) && (ch !== ":" || !firstSegment)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeComponent(input, isAllowed) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            output += "%" + hex.toUpperCase();
+            i += 2;
+            continue;
+          }
+        }
+        if (isAllowed(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
+        }
+      }
+      return output;
+    }
+    function encodeUserinfo(input) {
+      return encodeComponent(input, isUserinfoCharacter);
+    }
+    function encodeQuery(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function encodeFragment(input) {
+      return encodeComponent(input, isQueryFragmentCharacter);
+    }
+    function isEscapeSafe(cp) {
+      return cp >= 48 && cp <= 57 || cp >= 65 && cp <= 90 || cp >= 97 && cp <= 122 || cp === 42 || cp === 43 || cp === 45 || cp === 46 || cp === 47 || cp === 64 || cp === 95;
+    }
+    function normalizeQueryFragmentEncoding(input) {
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input[i];
+        if (ch === "%" && i + 2 < input.length) {
+          const hex = input.slice(i + 1, i + 3);
+          if (isHexPair(hex)) {
+            const normalizedHex = hex.toUpperCase();
+            const decoded = String.fromCharCode(parseInt(normalizedHex, 16));
+            if (isUnreserved(decoded)) {
+              output += decoded;
+            } else {
+              output += "%" + normalizedHex;
+            }
+            i += 2;
+            continue;
+          }
+        }
+        if (isQueryFragmentCharacter(ch)) {
+          output += ch;
+        } else {
+          const code = input.charCodeAt(i);
+          if (code < 128) {
+            output += isEscapeSafe(code) ? ch : BYTE_HEX[code];
+          } else if (code < 55296 || code > 57343) {
+            output += percentEncodeNonAscii(code);
+          } else if (code <= 56319 && i + 1 < input.length) {
+            const low = input.charCodeAt(i + 1);
+            if (low >= 56320 && low <= 57343) {
+              output += percentEncodeNonAscii(65536 + (code - 55296 << 10) + (low - 56320));
+              i++;
+            } else {
+              output += percentEncodeNonAscii(65533);
+            }
+          } else {
+            output += percentEncodeNonAscii(65533);
+          }
         }
       }
       return output;
@@ -3374,14 +3550,18 @@ var require_utils = __commonJS({
     function recomposeAuthority(component) {
       const uriTokens = [];
       if (component.userinfo !== void 0) {
-        uriTokens.push(component.userinfo);
+        uriTokens.push(encodeUserinfo(component.userinfo));
         uriTokens.push("@");
       }
       if (component.host !== void 0) {
-        let host = unescape(component.host);
+        let host = component.host;
         if (!isIPv4(host)) {
-          const ipV6res = normalizeIPv6(host);
-          if (ipV6res.isIPV6 === true) {
+          let ipV6res = normalizeIPv6(host);
+          if (ipV6res.isIPV6 !== true && ipV6res.isIPVFuture !== true) {
+            host = normalizePercentEncoding(host, true);
+            ipV6res = normalizeIPv6(host);
+          }
+          if (ipV6res.isIPV6 === true || ipV6res.isIPVFuture === true) {
             host = `[${ipV6res.escapedHost}]`;
           } else {
             host = reescapeHostDelimiters(host, false);
@@ -3390,8 +3570,12 @@ var require_utils = __commonJS({
         uriTokens.push(host);
       }
       if (typeof component.port === "number" || typeof component.port === "string") {
+        const port = String(component.port);
+        if (!isPort(port)) {
+          throw new TypeError("URI port is malformed.");
+        }
         uriTokens.push(":");
-        uriTokens.push(String(component.port));
+        uriTokens.push(port);
       }
       return uriTokens.length ? uriTokens.join("") : void 0;
     }
@@ -3401,6 +3585,11 @@ var require_utils = __commonJS({
       reescapeHostDelimiters,
       normalizePercentEncoding,
       normalizePathEncoding,
+      serializePathEncoding,
+      normalizeQueryFragmentEncoding,
+      encodeUserinfo,
+      encodeQuery,
+      encodeFragment,
       escapePreservingEscapes,
       removeDotSegments,
       isIPv4,
@@ -3416,7 +3605,7 @@ var require_schemes = __commonJS({
   "../../node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils();
-    var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
+    var URN_REG = /^([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-./:;=@]|%[\da-f]{2})+)$/iu;
     var supportedSchemeNames = (
       /** @type {const} */
       [
@@ -3477,9 +3666,10 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path, query] = wsComponent.resourceName.split("?");
+        const queryIndex = wsComponent.resourceName.indexOf("?");
+        const path = queryIndex === -1 ? wsComponent.resourceName : wsComponent.resourceName.slice(0, queryIndex);
         wsComponent.path = path && path !== "/" ? path : void 0;
-        wsComponent.query = query;
+        wsComponent.query = queryIndex === -1 ? void 0 : wsComponent.resourceName.slice(queryIndex + 1);
         wsComponent.resourceName = void 0;
       }
       wsComponent.fragment = void 0;
@@ -3491,7 +3681,7 @@ var require_schemes = __commonJS({
         return urnComponent;
       }
       const matches = urnComponent.path.match(URN_REG);
-      if (matches) {
+      if (matches && matches[0] === urnComponent.path) {
         const scheme = options.scheme || urnComponent.scheme || "urn";
         urnComponent.nid = matches[1].toLowerCase();
         urnComponent.nss = matches[2];
@@ -3625,8 +3815,17 @@ var require_schemes = __commonJS({
 var require_fast_uri = __commonJS({
   "../../node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
-    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
+    var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, serializePathEncoding, normalizeQueryFragmentEncoding, encodeQuery, encodeFragment, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
+    var VALID_SCHEME = /^[A-Za-z][A-Za-z0-9+.-]*$/u;
+    var MALFORMED_SCHEME_ERROR = "URI scheme is malformed.";
+    function decodeValidScheme(scheme) {
+      const decodedScheme = unescape(String(scheme));
+      if (!VALID_SCHEME.test(decodedScheme)) {
+        throw new TypeError(MALFORMED_SCHEME_ERROR);
+      }
+      return decodedScheme;
+    }
     function normalize(uri, options) {
       if (typeof uri === "string") {
         uri = /** @type {T} */
@@ -3639,12 +3838,34 @@ var require_fast_uri = __commonJS({
     }
     function resolve3(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
-      const { parsed: baseParsed, malformedAuthorityOrPort: baseMalformed } = parseWithStatus(baseURI, schemelessOptions);
-      const { parsed: relativeParsed, malformedAuthorityOrPort: relativeMalformed } = parseWithStatus(relativeURI, schemelessOptions);
-      if (baseMalformed || relativeMalformed) {
+      const {
+        parsed: baseParsed,
+        malformedAuthorityOrPort: baseMalformed,
+        malformedPercentEncoding: baseMalformedPercentEncoding,
+        malformedSchemeSpecific: baseMalformedSchemeSpecific,
+        malformedHost: baseMalformedHost,
+        malformedScheme: baseMalformedScheme
+      } = parseWithStatus(baseURI, schemelessOptions);
+      const {
+        parsed: relativeParsed,
+        malformedAuthorityOrPort: relativeMalformed,
+        malformedPercentEncoding: relativeMalformedPercentEncoding,
+        malformedSchemeSpecific: relativeMalformedSchemeSpecific,
+        malformedHost: relativeMalformedHost,
+        malformedScheme: relativeMalformedScheme
+      } = parseWithStatus(relativeURI, schemelessOptions);
+      if (baseMalformed || relativeMalformed || baseMalformedPercentEncoding || relativeMalformedPercentEncoding || baseMalformedSchemeSpecific || relativeMalformedSchemeSpecific || baseMalformedHost || relativeMalformedHost || baseMalformedScheme || relativeMalformedScheme) {
         throw new Error(baseParsed.error || relativeParsed.error || "URI is malformed.");
       }
       const resolved = resolveComponent(baseParsed, relativeParsed, schemelessOptions, true);
+      const resolvedSchemeHandler = getSchemeHandler(options && options.scheme || resolved.scheme);
+      const resolvedHost = resolved.host;
+      const resolvedHostIsIP = resolvedHost !== void 0 && resolvedHost !== "" && (isIPv4(resolvedHost) || normalizeIPv6(resolvedHost).isIPV6);
+      canonicalizeHost(resolved, options || {}, resolvedSchemeHandler, resolvedHostIsIP);
+      const encodedASCIIHost = resolvedHost && resolvedHost.indexOf("%") !== -1 && !new RegExp("\\P{ASCII}", "u").test(resolvedHost);
+      if (resolved.error && !encodedASCIIHost) {
+        throw new Error(resolved.error);
+      }
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
@@ -3704,7 +3925,7 @@ var require_fast_uri = __commonJS({
     function equal(uriA, uriB, options) {
       const normalizedA = normalizeComparableURI(uriA, options);
       const normalizedB = normalizeComparableURI(uriB, options);
-      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA.toLowerCase() === normalizedB.toLowerCase();
+      return normalizedA !== void 0 && normalizedB !== void 0 && normalizedA === normalizedB;
     }
     function serialize(cmpts, opts) {
       const component = {
@@ -3725,19 +3946,22 @@ var require_fast_uri = __commonJS({
       };
       const options = Object.assign({}, opts);
       const uriTokens = [];
+      if (component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
+      }
       const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
       if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
+      const hasAuthority = component.userinfo !== void 0 || component.host !== void 0 || component.port !== void 0;
+      const pathNoScheme = !options.skipEscape && component.scheme === void 0 && !hasAuthority;
       if (component.path !== void 0) {
         if (!options.skipEscape) {
-          component.path = escapePreservingEscapes(component.path);
-          if (component.scheme !== void 0) {
-            component.path = component.path.split("%3A").join(":");
-          }
+          component.path = serializePathEncoding(component.path, pathNoScheme);
         } else {
           component.path = normalizePercentEncoding(component.path);
         }
       }
       if (options.reference !== "suffix" && component.scheme) {
+        component.scheme = decodeValidScheme(component.scheme);
         uriTokens.push(component.scheme, ":");
       }
       const authority = recomposeAuthority(component);
@@ -3755,16 +3979,19 @@ var require_fast_uri = __commonJS({
         if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
           s = removeDotSegments(s);
         }
+        if (pathNoScheme) {
+          s = serializePathEncoding(s, true);
+        }
         if (authority === void 0 && s[0] === "/" && s[1] === "/") {
           s = "/%2F" + s.slice(2);
         }
         uriTokens.push(s);
       }
       if (component.query !== void 0) {
-        uriTokens.push("?", component.query);
+        uriTokens.push("?", encodeQuery(component.query));
       }
       if (component.fragment !== void 0) {
-        uriTokens.push("#", component.fragment);
+        uriTokens.push("#", encodeFragment(component.fragment));
       }
       return uriTokens.join("");
     }
@@ -3780,6 +4007,35 @@ var require_fast_uri = __commonJS({
       }
       return void 0;
     }
+    function hasMalformedPercentEncoding(component) {
+      if (component === void 0) return false;
+      let percent = component.indexOf("%");
+      while (percent !== -1) {
+        if (percent + 2 >= component.length || !/^[\da-f]{2}$/iu.test(component.slice(percent + 1, percent + 3))) {
+          return true;
+        }
+        percent = component.indexOf("%", percent + 3);
+      }
+      return false;
+    }
+    function isIPLiteral(host) {
+      return host[0] === "[" && host[host.length - 1] === "]";
+    }
+    function hasMalformedComponentPercentEncoding(matches) {
+      const host = matches[4];
+      return hasMalformedPercentEncoding(matches[3]) || host !== void 0 && !isIPLiteral(host) && hasMalformedPercentEncoding(host) || hasMalformedPercentEncoding(matches[6]) || hasMalformedPercentEncoding(matches[7]) || hasMalformedPercentEncoding(matches[8]);
+    }
+    function canonicalizeHost(parsed, options, schemeHandler, isIP) {
+      if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport) && parsed.host && !isIPLiteral(parsed.host) && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
+        try {
+          parsed.host = new URL("http://" + parsed.host).hostname;
+        } catch (e) {
+          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
+          return true;
+        }
+      }
+      return false;
+    }
     function parseWithStatus(uri, opts) {
       const options = Object.assign({}, opts);
       const parsed = {
@@ -3792,6 +4048,11 @@ var require_fast_uri = __commonJS({
         fragment: void 0
       };
       let malformedAuthorityOrPort = false;
+      let malformedPercentEncoding = false;
+      let malformedSchemeSpecific = false;
+      let malformedHost = false;
+      let malformedIPLiteral = false;
+      let malformedScheme = false;
       let isIP = false;
       if (options.reference === "suffix") {
         if (options.scheme) {
@@ -3828,6 +4089,19 @@ var require_fast_uri = __commonJS({
         parsed.path = matches[6] || "";
         parsed.query = matches[7];
         parsed.fragment = matches[8];
+        if (parsed.scheme !== void 0) {
+          const decodedScheme = unescape(parsed.scheme);
+          if (VALID_SCHEME.test(decodedScheme)) {
+            parsed.scheme = decodedScheme.toLowerCase();
+          } else {
+            parsed.error = parsed.error || MALFORMED_SCHEME_ERROR;
+            malformedScheme = true;
+          }
+        }
+        malformedPercentEncoding = hasMalformedComponentPercentEncoding(matches);
+        if (malformedPercentEncoding) {
+          parsed.error = parsed.error || "URI contains malformed percent-encoding.";
+        }
         if (isNaN(parsed.port)) {
           parsed.port = matches[5];
         }
@@ -3839,9 +4113,16 @@ var require_fast_uri = __commonJS({
         if (parsed.host) {
           const ipv4result = isIPv4(parsed.host);
           if (ipv4result === false) {
+            const bracketedIPLiteral = isIPLiteral(parsed.host);
+            const hasIPLiteralBracket = parsed.host.indexOf("[") !== -1 || parsed.host.indexOf("]") !== -1;
             const ipv6result = normalizeIPv6(parsed.host);
-            parsed.host = ipv6result.host.toLowerCase();
-            isIP = ipv6result.isIPV6;
+            isIP = ipv6result.isIPV6 || ipv6result.isIPVFuture === true;
+            malformedIPLiteral = hasIPLiteralBracket && (!bracketedIPLiteral || ipv6result.error === true);
+            parsed.host = isIP ? ipv6result.host : ipv6result.host.toLowerCase();
+            if (malformedIPLiteral) {
+              parsed.error = parsed.error || "URI host is malformed.";
+              malformedAuthorityOrPort = true;
+            }
           } else {
             isIP = true;
           }
@@ -3859,42 +4140,36 @@ var require_fast_uri = __commonJS({
           parsed.error = parsed.error || "URI is not a " + options.reference + " reference.";
         }
         const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
-          if (parsed.host && (options.domainHost || schemeHandler && schemeHandler.domainHost) && isIP === false && nonSimpleDomain(parsed.host)) {
-            try {
-              parsed.host = new URL("http://" + parsed.host).hostname;
-            } catch (e) {
-              parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-            }
-          }
+        if (!malformedIPLiteral) {
+          malformedHost = canonicalizeHost(parsed, options, schemeHandler, isIP);
         }
         if (!schemeHandler || schemeHandler && !schemeHandler.skipNormalize) {
           if (uri.indexOf("%") !== -1) {
-            if (parsed.scheme !== void 0) {
-              parsed.scheme = unescape(parsed.scheme);
-            }
-            if (parsed.host !== void 0) {
-              parsed.host = reescapeHostDelimiters(unescape(parsed.host), isIP);
+            if (parsed.host !== void 0 && !malformedIPLiteral) {
+              const host = isIP ? parsed.host : normalizePercentEncoding(parsed.host, true);
+              parsed.host = reescapeHostDelimiters(host, isIP);
             }
           }
           if (parsed.path) {
             parsed.path = normalizePathEncoding(parsed.path);
           }
+          if (parsed.query) {
+            parsed.query = normalizeQueryFragmentEncoding(parsed.query);
+          }
           if (parsed.fragment) {
-            try {
-              parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
-            } catch {
-              parsed.error = parsed.error || "URI malformed";
-            }
+            parsed.fragment = normalizeQueryFragmentEncoding(parsed.fragment);
           }
         }
         if (schemeHandler && schemeHandler.parse) {
           schemeHandler.parse(parsed, options);
+          if (schemeHandler === SCHEMES.urn && parsed.nid === void 0) {
+            malformedSchemeSpecific = true;
+          }
         }
       } else {
         parsed.error = parsed.error || "URI can not be parsed.";
       }
-      return { parsed, malformedAuthorityOrPort };
+      return { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme };
     }
     function parse3(uri, opts) {
       return parseWithStatus(uri, opts).parsed;
@@ -3903,20 +4178,28 @@ var require_fast_uri = __commonJS({
       return normalizeStringWithStatus(uri, opts).normalized;
     }
     function normalizeStringWithStatus(uri, opts) {
-      const { parsed, malformedAuthorityOrPort } = parseWithStatus(uri, opts);
+      const { parsed, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = parseWithStatus(uri, opts);
       return {
-        normalized: malformedAuthorityOrPort ? uri : serialize(parsed, opts),
-        malformedAuthorityOrPort
+        normalized: malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? uri : serialize(parsed, opts),
+        malformedAuthorityOrPort,
+        malformedPercentEncoding,
+        malformedSchemeSpecific,
+        malformedHost,
+        malformedScheme
       };
     }
     function normalizeComparableURI(uri, opts) {
-      if (typeof uri === "string") {
-        const { normalized, malformedAuthorityOrPort } = normalizeStringWithStatus(uri, opts);
-        return malformedAuthorityOrPort ? void 0 : normalized;
+      if (typeof uri !== "string" && typeof uri !== "object") {
+        return void 0;
       }
-      if (typeof uri === "object") {
-        return serialize(uri, opts);
+      let value;
+      try {
+        value = typeof uri === "string" ? uri : serialize(uri, opts);
+      } catch {
+        return void 0;
       }
+      const { normalized, malformedAuthorityOrPort, malformedPercentEncoding, malformedSchemeSpecific, malformedHost, malformedScheme } = normalizeStringWithStatus(value, opts);
+      return malformedAuthorityOrPort || malformedPercentEncoding || malformedSchemeSpecific || malformedHost || malformedScheme ? void 0 : normalized;
     }
     var fastUri = {
       SCHEMES,
@@ -21513,7 +21796,16 @@ var InboxService = class {
   async getPublicPage(options = {}) {
     if (options.forceRescan) await this.scan();
     const records = [...this.assets.values()];
-    const filteredRecords = options.boardId ? records.filter((record2) => record2.boardId === options.boardId) : records;
+    const words = (options.query ?? "").normalize("NFKC").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filteredRecords = records.filter((record2) => {
+      if (options.boardId && record2.boardId !== options.boardId) return false;
+      const text = `${record2.title} ${record2.boardTitle} ${record2.pinId}`.normalize("NFKC").toLocaleLowerCase();
+      return words.every((word) => text.includes(word));
+    });
+    filteredRecords.sort((left, right) => {
+      const order = options.sort === "title" ? left.title.localeCompare(right.title, "zh-CN", { numeric: true }) : options.sort === "oldest" ? left.updatedAt.localeCompare(right.updatedAt) : right.updatedAt.localeCompare(left.updatedAt);
+      return order || left.id.localeCompare(right.id);
+    });
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
     const visible = filteredRecords.slice(offset, offset + limit);
@@ -21603,13 +21895,110 @@ var InboxService = class {
 };
 
 // src/local-panel-server.ts
-import { randomBytes } from "node:crypto";
-import { existsSync as existsSync2 } from "node:fs";
-import { readFile as readFile2 } from "node:fs/promises";
+import { randomBytes as randomBytes2 } from "node:crypto";
+import { constants as constants2, existsSync as existsSync2 } from "node:fs";
+import { open, readFile as readFile2 } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname as dirname2, join as join2 } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
+// src/references.ts
+import { randomBytes } from "node:crypto";
+import { stat as stat2 } from "node:fs/promises";
+var MAX_REFERENCES = 10;
+var REFERENCE_SESSION_PATTERN = /^[a-f0-9]{32}$/;
+var ReferenceError2 = class extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+};
+function publicAsset(asset) {
+  const { sourcePath: _path, sourceRelativePath: _relative, signature: _signature, ...value } = asset;
+  return value;
+}
+async function fingerprint(path, indexed) {
+  const value = await stat2(path);
+  if (indexed && (value.size !== indexed.size || value.mtime.toISOString() !== indexed.updatedAt)) {
+    throw new ReferenceError2(409, "\u56FE\u7247\u5728\u7D22\u5F15\u540E\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u7D20\u6750\u5E93\u540E\u91CD\u65B0\u9009\u62E9");
+  }
+  return `${value.dev}:${value.ino}:${value.size}:${value.mtimeMs}:${value.ctimeMs}`;
+}
+var ReferenceSessions = class {
+  constructor(inbox2) {
+    this.inbox = inbox2;
+  }
+  sessions = /* @__PURE__ */ new Map();
+  create() {
+    if (this.sessions.size >= 64) throw new ReferenceError2(409, "\u53C2\u8003\u4F1A\u8BDD\u5DF2\u8FBE\u4E0A\u9650\uFF0C\u8BF7\u91CD\u542F\u63D2\u4EF6\u540E\u91CD\u65B0\u9009\u62E9\u56FE\u7247");
+    const session = { id: randomBytes(16).toString("hex"), revision: 0, entries: [] };
+    this.sessions.set(session.id, session);
+    return session.id;
+  }
+  require(id) {
+    const session = REFERENCE_SESSION_PATTERN.test(id) ? this.sessions.get(id) : void 0;
+    if (!session) throw new ReferenceError2(410, "\u53C2\u8003\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u8BA9 Codex \u91CD\u65B0\u6253\u5F00\u53C2\u8003\u7BEE");
+    return session;
+  }
+  async describe(id) {
+    const session = this.require(id);
+    const revision = session.revision;
+    const entries = await Promise.all(session.entries.map(async (entry, index) => {
+      const asset = await this.inbox.resolveAsset(entry.asset.id);
+      const current = asset ? await fingerprint(asset.sourcePath).catch(() => null) : null;
+      const status = current === null ? "missing" : current !== entry.fingerprint ? "changed" : "ready";
+      return { ...entry.asset, number: index + 1, status };
+    }));
+    return { referenceSessionId: id, revision, limit: MAX_REFERENCES, entries };
+  }
+  async replace(id, assetIds, expectedRevision) {
+    const session = this.require(id);
+    if (session.revision !== expectedRevision) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u5DF2\u5728\u5176\u4ED6\u9875\u9762\u66F4\u65B0\uFF0C\u8BF7\u67E5\u770B\u6700\u65B0\u9009\u62E9\u540E\u91CD\u8BD5");
+    if (assetIds.length > MAX_REFERENCES) throw new ReferenceError2(400, `\u4E00\u6B21\u6700\u591A\u9009\u62E9 ${MAX_REFERENCES} \u5F20\u53C2\u8003\u56FE`);
+    if (new Set(assetIds).size !== assetIds.length || assetIds.some((id2) => !/^[a-f0-9]{24}$/.test(id2))) {
+      throw new ReferenceError2(400, "\u53C2\u8003\u56FE\u5217\u8868\u5305\u542B\u91CD\u590D\u9879\u6216\u65E0\u6548\u7D20\u6750 ID");
+    }
+    const entries = await Promise.all(assetIds.map(async (assetId) => {
+      const previous = session.entries.find((entry) => entry.asset.id === assetId);
+      if (previous) return previous;
+      const asset = await this.inbox.resolveAsset(assetId);
+      if (!asset) throw new ReferenceError2(404, "\u56FE\u7247\u5DF2\u4E0D\u5728\u7D20\u6750\u5E93\u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+      const fileFingerprint = await fingerprint(asset.sourcePath, asset).catch((error2) => {
+        if (error2 instanceof ReferenceError2) throw error2;
+        return null;
+      });
+      if (!fileFingerprint) throw new ReferenceError2(404, "\u56FE\u7247\u6682\u65F6\u4E0D\u53EF\u8BFB\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+      return { asset: publicAsset(asset), fingerprint: fileFingerprint };
+    }));
+    if (session.revision !== expectedRevision) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u5DF2\u5728\u5176\u4ED6\u9875\u9762\u66F4\u65B0\uFF0C\u8BF7\u67E5\u770B\u6700\u65B0\u9009\u62E9\u540E\u91CD\u8BD5");
+    if (session.entries.map((entry) => entry.asset.id).join() !== assetIds.join()) {
+      session.entries = entries;
+      session.revision += 1;
+    }
+    return this.describe(id);
+  }
+  async resolve(id, expectedRevision) {
+    const session = this.require(id);
+    const revision = session.revision;
+    if (expectedRevision !== void 0 && revision !== expectedRevision) {
+      throw new ReferenceError2(409, "\u53C2\u8003\u56FE\u9009\u62E9\u5DF2\u7ECF\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u8BFB\u53D6\u53C2\u8003\u7BEE");
+    }
+    if (!session.entries.length) throw new ReferenceError2(409, "\u53C2\u8003\u7BEE\u8FD8\u662F\u7A7A\u7684\uFF0C\u8BF7\u5148\u5728\u9762\u677F\u4E2D\u9009\u62E9\u56FE\u7247");
+    const files = await Promise.all(session.entries.map(async (entry, index) => {
+      const asset = await this.inbox.resolveAsset(entry.asset.id);
+      const current = asset ? await fingerprint(asset.sourcePath).catch(() => null) : null;
+      if (!asset || current !== entry.fingerprint) {
+        throw new ReferenceError2(409, `\u53C2\u8003\u56FE ${index + 1} \u5DF2\u53D8\u5316\u6216\u4E0D\u53EF\u7528\uFF0C\u8BF7\u79FB\u9664\u540E\u91CD\u65B0\u9009\u62E9`);
+      }
+      return { number: index + 1, assetId: asset.id, title: asset.title, boardTitle: asset.boardTitle, path: asset.sourcePath };
+    }));
+    if (session.revision !== revision) throw new ReferenceError2(409, "\u8BFB\u53D6\u671F\u95F4\u53C2\u8003\u56FE\u9009\u62E9\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u91CD\u8BD5");
+    return { referenceSessionId: id, revision, files };
+  }
+};
+
+// src/local-panel-server.ts
 var LOOPBACK_HOST = "127.0.0.1";
 var MAX_JSON_BYTES = 2048;
 var CLOSE_GRACE_MS = 500;
@@ -21651,8 +22040,8 @@ function assertLoopbackRequest(request, expectedHost) {
     throw new HttpError(421, "\u8BF7\u6C42\u4E3B\u673A\u4E0E\u672C\u5730\u9762\u677F\u4E0D\u5339\u914D");
   }
 }
-function assertApiSession(request, sessionId, csrfToken) {
-  if (requestCookie(request, "pinterest_panel_session") !== sessionId) {
+function assertApiSession(request, sessionId, csrfToken, cookieName) {
+  if (requestCookie(request, cookieName) !== sessionId) {
     throw new HttpError(401, "\u672C\u5730\u9762\u677F\u4F1A\u8BDD\u5DF2\u5931\u6548\uFF0C\u8BF7\u5237\u65B0\u9875\u9762");
   }
   if (request.headers["x-pinterest-panel-token"] !== csrfToken) {
@@ -21698,35 +22087,65 @@ function parsePort(value) {
   if (!Number.isInteger(value) || value < 0 || value > 65535) throw new Error("PINTEREST_PANEL_PORT \u5FC5\u987B\u662F 0 \u5230 65535 \u7684\u6574\u6570");
   return value;
 }
-async function writeTextToMacClipboard(text) {
-  if (process.platform !== "darwin" || !existsSync2("/usr/bin/pbcopy")) {
-    throw new Error("\u5F53\u524D\u7CFB\u7EDF\u6CA1\u6709\u53EF\u7528\u7684 macOS \u526A\u8D34\u677F\u670D\u52A1");
-  }
-  if (!text || Buffer.byteLength(text, "utf8") > 16384) throw new Error("\u5F85\u590D\u5236\u8DEF\u5F84\u65E0\u6548\u6216\u8FC7\u957F");
-  await new Promise((resolveWrite, rejectWrite) => {
-    const child = spawn("/usr/bin/pbcopy", [], { stdio: ["pipe", "ignore", "pipe"] });
-    const errors = [];
+function runClipboardCommand(command, input, deadline) {
+  return new Promise((resolveCommand, rejectCommand) => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      rejectCommand(new Error("clipboard timeout"));
+      return;
+    }
+    const child = spawn(`/usr/bin/${command}`, command === "pbpaste" ? ["-Prefer", "txt"] : [], {
+      stdio: ["pipe", "pipe", "ignore"],
+      // GUI/MCP hosts may use C or no locale. pbcopy can exit 0 yet discard
+      // non-ASCII input in that environment; stdin's UTF-8 flag alone is insufficient.
+      env: { ...process.env, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", LC_CTYPE: "en_US.UTF-8" }
+    });
+    const chunks = [];
+    let size = 0;
     let settled = false;
     const finish = (error2) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (error2) rejectWrite(error2);
-      else resolveWrite();
+      if (error2) rejectCommand(error2);
+      else resolveCommand(Buffer.concat(chunks));
     };
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      finish(new Error("\u5199\u5165\u526A\u8D34\u677F\u8D85\u65F6"));
-    }, 5e3);
-    child.stderr.on("data", (chunk) => errors.push(Buffer.from(chunk)));
+      child.kill("SIGKILL");
+      finish(new Error("clipboard timeout"));
+    }, remaining);
+    child.stdout.on("data", (chunk) => {
+      if (settled) return;
+      size += chunk.byteLength;
+      if (size > 16384) {
+        child.kill("SIGKILL");
+        finish(new Error("clipboard content changed"));
+      } else chunks.push(Buffer.from(chunk));
+    });
     child.once("error", (error2) => finish(error2));
     child.once("close", (code) => {
       if (code === 0) finish();
-      else finish(new Error(Buffer.concat(errors).toString("utf8").trim() || `pbcopy \u9000\u51FA\u7801 ${code}`));
+      else finish(new Error("clipboard command failed"));
     });
     child.stdin.once("error", (error2) => finish(error2));
-    child.stdin.end(text, "utf8");
+    child.stdin.end(input, "utf8");
   });
+}
+async function writeTextToMacClipboard(text) {
+  if (process.platform !== "darwin" || !existsSync2("/usr/bin/pbcopy") || !existsSync2("/usr/bin/pbpaste")) {
+    throw new HttpError(503, "\u5F53\u524D\u7CFB\u7EDF\u6CA1\u6709\u53EF\u7528\u7684 macOS \u526A\u8D34\u677F\u670D\u52A1");
+  }
+  if (!text || text.includes("\0") || Buffer.byteLength(text, "utf8") > 16384) {
+    throw new HttpError(400, "\u5F85\u590D\u5236\u8DEF\u5F84\u65E0\u6548\u6216\u8FC7\u957F");
+  }
+  try {
+    const deadline = Date.now() + 5e3;
+    await runClipboardCommand("pbcopy", text, deadline);
+    const copied = await runClipboardCommand("pbpaste", "", deadline);
+    if (!copied.equals(Buffer.from(text, "utf8"))) throw new Error("clipboard verification failed");
+  } catch {
+    throw new HttpError(503, "\u672A\u80FD\u786E\u8BA4\u8DEF\u5F84\u5DF2\u5199\u5165\u526A\u8D34\u677F\uFF0C\u8BF7\u91CD\u65B0\u590D\u5236");
+  }
 }
 async function startLocalPanelServer(options) {
   const moduleDirectory2 = dirname2(fileURLToPath(import.meta.url));
@@ -21737,22 +22156,26 @@ async function startLocalPanelServer(options) {
     readFile2(join2(assetRoot, "local-panel.js"), "utf8")
   ]);
   const clipboardWriter = options.clipboardWriter ?? writeTextToMacClipboard;
-  const sessionId = randomBytes(24).toString("base64url");
-  const csrfToken = randomBytes(24).toString("base64url");
+  const references2 = options.references ?? new ReferenceSessions(options.inbox);
+  const sessionId = randomBytes2(24).toString("base64url");
+  const csrfToken = randomBytes2(24).toString("base64url");
   let origin = "";
   let expectedHost = "";
+  let cookieName = "";
   const httpServer = createServer((request, response) => {
     void (async () => {
       assertLoopbackRequest(request, expectedHost);
       const method = request.method ?? "GET";
       const requestUrl = new URL(request.url ?? "/", origin);
       if (method === "GET" && requestUrl.pathname === "/") {
-        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken);
+        const referenceSessionId2 = requestUrl.searchParams.get("ref") ?? "";
+        if (referenceSessionId2 && !REFERENCE_SESSION_PATTERN.test(referenceSessionId2)) throw new HttpError(400, "\u53C2\u8003\u4F1A\u8BDD\u5730\u5740\u65E0\u6548");
+        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken).replace("__PINTEREST_REFERENCE_SESSION__", referenceSessionId2);
         response.writeHead(200, {
           ...commonHeaders(),
           "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
           "Content-Type": "text/html; charset=utf-8",
-          "Set-Cookie": `pinterest_panel_session=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
+          "Set-Cookie": `${cookieName}=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
         });
         response.end(html);
         return;
@@ -21773,7 +22196,17 @@ async function startLocalPanelServer(options) {
         return;
       }
       if (!requestUrl.pathname.startsWith("/api/")) throw new HttpError(404, "\u9875\u9762\u4E0D\u5B58\u5728");
-      assertApiSession(request, sessionId, csrfToken);
+      assertApiSession(request, sessionId, csrfToken, cookieName);
+      const referenceSessionId = () => {
+        const id = request.headers["x-pinterest-reference-session"];
+        if (typeof id !== "string") throw new HttpError(400, "\u8BF7\u4ECE\u5F53\u524D Codex \u4EFB\u52A1\u6253\u5F00\u53C2\u8003\u7BEE");
+        references2.require(id);
+        return id;
+      };
+      if (method === "GET" && requestUrl.pathname === "/api/references") {
+        sendJson(response, 200, await references2.describe(referenceSessionId()));
+        return;
+      }
       if (method === "GET" && requestUrl.pathname === "/api/status") {
         const knownVersionRaw = requestUrl.searchParams.get("knownVersion");
         const knownVersion = knownVersionRaw && /^\d+$/.test(knownVersionRaw) ? Number.parseInt(knownVersionRaw, 10) : null;
@@ -21785,13 +22218,19 @@ async function startLocalPanelServer(options) {
         const cursorRaw = requestUrl.searchParams.get("cursor");
         const limitRaw = requestUrl.searchParams.get("limit");
         const boardIdRaw = requestUrl.searchParams.get("boardId");
+        const query = requestUrl.searchParams.get("q") ?? "";
+        const sort = requestUrl.searchParams.get("sort") ?? "recent";
+        if (query.length > 200) throw new HttpError(400, "\u641C\u7D22\u5185\u5BB9\u8FC7\u957F\uFF0C\u8BF7\u7F29\u77ED\u5173\u952E\u8BCD");
+        if (sort !== "recent" && sort !== "oldest" && sort !== "title") throw new HttpError(400, "\u6392\u5E8F\u65B9\u5F0F\u65E0\u6548");
         if (cursorRaw && !/^\d{1,9}$/.test(cursorRaw)) throw new HttpError(400, "\u5206\u9875\u6E38\u6807\u65E0\u6548");
         if (limitRaw && !/^\d{1,2}$/.test(limitRaw)) throw new HttpError(400, "\u5206\u9875\u6570\u91CF\u65E0\u6548");
         if (boardIdRaw && (boardIdRaw.length > 255 || /[\u0000-\u001f]/.test(boardIdRaw))) throw new HttpError(400, "\u56FE\u7248 ID \u65E0\u6548");
         const page = await options.inbox.getPublicPage({
           ...cursorRaw ? { cursor: cursorRaw } : {},
           ...limitRaw ? { limit: Number.parseInt(limitRaw, 10) } : {},
-          ...boardIdRaw ? { boardId: boardIdRaw } : {}
+          ...boardIdRaw ? { boardId: boardIdRaw } : {},
+          query,
+          sort
         });
         sendJson(response, 200, { page });
         return;
@@ -21804,7 +22243,47 @@ async function startLocalPanelServer(options) {
         response.end(thumbnail.data);
         return;
       }
+      const previewMatch = method === "GET" ? requestUrl.pathname.match(/^\/api\/previews\/([a-f0-9]{24})$/) : null;
+      if (previewMatch) {
+        const asset = await options.inbox.resolveAsset(previewMatch[1] ?? "");
+        if (!asset) throw new HttpError(404, "\u539F\u56FE\u5DF2\u4E0D\u5728\u7D20\u6750\u5E93\u4E2D\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+        const file = await open(asset.sourcePath, constants2.O_RDONLY | constants2.O_NOFOLLOW);
+        try {
+          const info = await file.stat();
+          if (!info.isFile()) throw new HttpError(404, "\u539F\u56FE\u4E0D\u53EF\u7528");
+          if (info.size > 64 * 1024 * 1024) throw new HttpError(413, "\u539F\u56FE\u8D85\u8FC7 64 MB\uFF0C\u8BF7\u590D\u5236\u8DEF\u5F84\u540E\u4EA4\u7ED9 Codex \u67E5\u770B");
+          const current = await options.inbox.resolveAsset(asset.id);
+          if (!current || current.sourcePath !== asset.sourcePath) throw new HttpError(409, "\u539F\u56FE\u4F4D\u7F6E\u5DF2\u53D8\u5316\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5");
+          const types = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".avif": "image/avif", ".gif": "image/gif" };
+          const contentType = types[asset.extension];
+          if (!contentType) throw new HttpError(415, "\u6682\u4E0D\u652F\u6301\u9884\u89C8\u6B64\u683C\u5F0F");
+          const bytes = await file.readFile();
+          response.writeHead(200, { ...commonHeaders(), "Content-Type": contentType, "Content-Length": bytes.length });
+          response.end(bytes);
+        } finally {
+          await file.close();
+        }
+        return;
+      }
       if (method === "POST") assertSameOriginMutation(request, origin);
+      if (method === "POST" && requestUrl.pathname === "/api/references") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "\u53C2\u8003\u7BEE\u8BF7\u6C42\u65E0\u6548");
+        const value = body;
+        if (Object.keys(body).sort().join() !== "assetIds,revision" || !Array.isArray(value.assetIds) || !value.assetIds.every((id) => typeof id === "string") || !Number.isInteger(value.revision) || Number(value.revision) < 0) {
+          throw new HttpError(400, "\u53C2\u8003\u7BEE\u53EA\u80FD\u63D0\u4EA4\u7D20\u6750 ID \u5217\u8868\u4E0E\u7248\u672C\u53F7");
+        }
+        sendJson(response, 200, await references2.replace(referenceSessionId(), value.assetIds, Number(value.revision)));
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/references/clipboard") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).join() !== "revision" || !Number.isInteger(body.revision)) throw new HttpError(400, "\u590D\u5236\u8BF7\u6C42\u9700\u8981\u53C2\u8003\u7BEE\u7248\u672C\u53F7");
+        const selected = await references2.resolve(referenceSessionId(), body.revision);
+        await clipboardWriter(selected.files.map((file) => file.path).join("\n"));
+        sendJson(response, 200, { status: "copied", count: selected.files.length });
+        return;
+      }
       if (method === "POST" && requestUrl.pathname === "/api/refresh") {
         const body = await readJson(request);
         if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 0) {
@@ -21837,8 +22316,8 @@ async function startLocalPanelServer(options) {
         response.destroy();
         return;
       }
-      const status = error2 instanceof HttpError ? error2.status : 500;
-      const message = error2 instanceof HttpError ? error2.message : "\u672C\u5730\u9762\u677F\u6682\u65F6\u65E0\u6CD5\u5B8C\u6210\u8BF7\u6C42\uFF0C\u8BF7\u91CD\u8BD5";
+      const status = error2 instanceof HttpError || error2 instanceof ReferenceError2 ? error2.status : 500;
+      const message = error2 instanceof HttpError || error2 instanceof ReferenceError2 ? error2.message : "\u672C\u5730\u9762\u677F\u6682\u65F6\u65E0\u6CD5\u5B8C\u6210\u8BF7\u6C42\uFF0C\u8BF7\u91CD\u8BD5";
       sendJson(response, status, { error: message });
     });
   });
@@ -21858,6 +22337,7 @@ async function startLocalPanelServer(options) {
   }
   origin = `http://${LOOPBACK_HOST}:${address.port}`;
   expectedHost = `${LOOPBACK_HOST}:${address.port}`;
+  cookieName = `pinterest_panel_session_${address.port}`;
   let closePromise = null;
   return {
     host: LOOPBACK_HOST,
@@ -21885,10 +22365,10 @@ async function startLocalPanelServer(options) {
 }
 
 // src/workspace.ts
-import { createHash as createHash2, randomBytes as randomBytes2 } from "node:crypto";
+import { createHash as createHash2, randomBytes as randomBytes3 } from "node:crypto";
 import { execFile as execFile2 } from "node:child_process";
-import { constants as constants2, existsSync as existsSync3 } from "node:fs";
-import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, rm as rm2, stat as stat2 } from "node:fs/promises";
+import { constants as constants3, existsSync as existsSync3 } from "node:fs";
+import { access, copyFile as copyFile2, lstat as lstat2, mkdir as mkdir2, readFile as readFile3, realpath as realpath2, rename as rename2, rm as rm2, stat as stat3 } from "node:fs/promises";
 import { homedir as homedir2 } from "node:os";
 import { basename as basename2, dirname as dirname3, extname as extname2, join as join3, relative as relative2, resolve as resolve2, sep as sep2 } from "node:path";
 import { promisify as promisify2 } from "node:util";
@@ -21927,9 +22407,9 @@ var WorkspaceRegistry = class {
     if (!candidate) return { available: false, name: null, token: null, reason: "Codex \u672A\u63D0\u4F9B\u5F53\u524D\u5DE5\u4F5C\u533A\u8DEF\u5F84" };
     try {
       const canonicalPath = await realpath2(resolve2(candidate));
-      if (!(await stat2(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
-      await access(canonicalPath, constants2.R_OK | constants2.W_OK);
-      const token = randomBytes2(24).toString("base64url");
+      if (!(await stat3(canonicalPath)).isDirectory()) throw new Error("\u5DE5\u4F5C\u533A\u4E0D\u662F\u76EE\u5F55");
+      await access(canonicalPath, constants3.R_OK | constants3.W_OK);
+      const token = randomBytes3(24).toString("base64url");
       this.roots.set(token, canonicalPath);
       return { available: true, name: basename2(canonicalPath), token, reason: null };
     } catch (error2) {
@@ -21959,7 +22439,7 @@ var WorkspaceRegistry = class {
     } catch {
     }
     if (!isWithin2(canonicalRoot, await realpath2(dirname3(destinationPath)))) throw new Error("\u76EE\u6807\u8DEF\u5F84\u8D8A\u8FC7\u4E86\u5DE5\u4F5C\u533A\u8FB9\u754C");
-    await copyFile2(prepared.path, destinationPath, constants2.COPYFILE_EXCL);
+    await copyFile2(prepared.path, destinationPath, constants3.COPYFILE_EXCL);
     return this.result(canonicalRoot, destinationPath, false, prepared);
   }
   async prepareReference(asset) {
@@ -21979,7 +22459,7 @@ var WorkspaceRegistry = class {
     try {
       const inspected = await execFileAsync2(this.imageProcessorPath, ["-g", "pixelWidth", "-g", "pixelHeight", "-g", "hasAlpha", asset.sourcePath], { timeout: 15e3 });
       const properties = parseSipsProperties(inspected.stdout);
-      const sourceStat = await stat2(asset.sourcePath);
+      const sourceStat = await stat3(asset.sourcePath);
       const withinReferenceSize = Math.max(properties.width, properties.height) <= REFERENCE_MAX_EDGE;
       const reusableFormat = properties.hasAlpha ? sourceExtension === ".png" : sourceExtension === ".jpg";
       if (withinReferenceSize && reusableFormat) {
@@ -22002,7 +22482,7 @@ var WorkspaceRegistry = class {
       temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp${targetExtension}`;
       const formatArguments = properties.hasAlpha ? ["-s", "format", "png"] : ["-s", "format", "jpeg", "-s", "formatOptions", String(REFERENCE_JPEG_QUALITY)];
       await execFileAsync2(this.imageProcessorPath, ["-Z", String(REFERENCE_MAX_EDGE), ...formatArguments, asset.sourcePath, "--out", temporaryPath], { timeout: 6e4 });
-      const generatedStat = await stat2(temporaryPath);
+      const generatedStat = await stat3(temporaryPath);
       if (generatedStat.size < 1) throw new Error("\u751F\u6210\u7684\u5F15\u7528\u56FE\u7247\u4E3A\u7A7A");
       if (generatedStat.size >= sourceStat.size) {
         await rm2(temporaryPath, { force: true });
@@ -22036,6 +22516,7 @@ var moduleDirectory = dirname4(fileURLToPath2(import.meta.url));
 var panelHtml = readFileSync(join4(moduleDirectory, "../assets/pinterest-panel.html"), "utf8");
 var inbox = new InboxService();
 var workspaces = new WorkspaceRegistry();
+var references = new ReferenceSessions(inbox);
 var localPanel = null;
 var localPanelStart = null;
 var localPanelStop = null;
@@ -22044,7 +22525,7 @@ async function ensureLocalPanel() {
   if (localPanel) return localPanel;
   if (!localPanelStart) {
     const configuredPort = process.env.PINTEREST_PANEL_PORT ? Number(process.env.PINTEREST_PANEL_PORT) : 0;
-    localPanelStart = startLocalPanelServer({ inbox, port: configuredPort }).then((handle) => {
+    localPanelStart = startLocalPanelServer({ inbox, references, port: configuredPort }).then((handle) => {
       localPanel = handle;
       return handle;
     }).finally(() => {
@@ -22076,7 +22557,7 @@ var server = new McpServer(
   { name: "pinterest-reference-panel", version: "0.4.0" },
   {
     capabilities: { resources: {}, tools: {} },
-    instructions: "Use open_pinterest_inbox_web as the primary experience: open its loopback URL in the Codex in-app browser, then let the user click an indexed image to copy its canonical absolute path and paste it into the conversation. Do not auto-send a message, re-encode, copy, or modify the selected source. The embedded workspace-import panel remains a legacy fallback only. Never accept arbitrary source URLs or paths."
+    instructions: "When Pinterest Inbox is selected or mentioned, an unqualified request to open it (including \u6253\u5F00\u9879\u76EE) means launch its running material panel, unless the user explicitly asks for source code, documentation or Codex project management. Call open_pinterest_inbox_web, then actually call the Codex open_in_codex tool with target {type: 'browser', url: the complete returned URL} and placement 'right' for THIS task. Discover deferred tools when needed. Opening README or locating a repository does not fulfill this request. Do not use desktop automation on Codex or start a second InboxService as a workaround. Report opened only after the browser action succeeds; distinguish queued from displayed. Retain the returned referenceSessionId for THIS task. When the user asks to use selected references, call get_pinterest_reference_selection with that exact ID, then read the returned original local image files before visual analysis or generation. Use numbered files in returned order. Never guess a session or read another task's basket. To reopen the same basket pass its referenceSessionId; omitting it creates an empty independent basket. Recheck the returned revision before using references if the user changes selection. Selecting images never sends a message. Do not copy, re-encode or modify originals. Path copying remains an explicit fallback. Never accept arbitrary source URLs or paths."
   }
 );
 async function workspaceCandidate(explicitRoot) {
@@ -22167,28 +22648,55 @@ server.registerTool(
 server.registerTool(
   "open_pinterest_inbox_web",
   {
-    title: "\u6253\u5F00 Pinterest Inbox \u672C\u5730\u7F51\u9875",
-    description: "\u542F\u52A8\u53EA\u7ED1\u5B9A\u672C\u673A\u56DE\u73AF\u5730\u5740\u7684 Pinterest Inbox \u7011\u5E03\u6D41\u7F51\u9875\uFF0C\u5E76\u8FD4\u56DE\u53EF\u5728 Codex \u5185\u5D4C\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00\u7684 URL\u3002",
-    inputSchema: {},
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    title: "\u542F\u52A8 Pinterest Inbox \u53F3\u4FA7\u7D20\u6750\u9762\u677F",
+    description: "\u9009\u62E9\u6216\u63D0\u5230 Pinterest Inbox \u63D2\u4EF6\u540E\u8981\u6C42\u6253\u5F00/\u542F\u52A8\uFF08\u5982\u2018\u6253\u5F00\u9879\u76EE\u2019\uFF09\u65F6\u8C03\u7528\u3002\u542F\u52A8\u7D20\u6750\u5DE5\u4F5C\u53F0\u540E\uFF0C\u7EE7\u7EED\u8C03\u7528 Codex open_in_codex\uFF0C\u4EE5 target.type=browser\u3001target.url=\u8FD4\u56DE\u7684\u5B8C\u6574 URL\u3001placement=right \u663E\u793A\u5230\u5F53\u524D\u4EFB\u52A1\u53F3\u4FA7\u3002\u9996\u6B21\u4E0D\u4F20\u53C2\u6570\u521B\u5EFA\u72EC\u7ACB\u53C2\u8003\u7BEE\uFF1B\u4FDD\u5B58 referenceSessionId\uFF0C\u91CD\u5F00\u6216\u8BFB\u53D6\u9009\u56FE\u65F6\u4F20\u56DE\uFF0C\u4E0D\u5F97\u501F\u7528\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD\u3002\u53EA\u6709\u660E\u786E\u8981\u6E90\u7801\u6216\u6587\u6863\u65F6\u624D\u6253\u5F00\u6587\u4EF6\u3002",
+    inputSchema: { referenceSessionId: external_exports.string().regex(REFERENCE_SESSION_PATTERN).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     _meta: {
       "openai/toolInvocation/invoking": "\u6B63\u5728\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\u2026",
       "openai/toolInvocation/invoked": "Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u5C31\u7EEA"
     }
   },
-  async () => {
+  async ({ referenceSessionId }) => {
     try {
       const handle = await ensureLocalPanel();
+      const id = referenceSessionId ? references.require(referenceSessionId).id : references.create();
+      const url = `${handle.url}?ref=${id}`;
       return {
-        structuredContent: { status: "running", url: handle.url, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
-        content: [{ type: "text", text: `Pinterest Inbox \u672C\u5730\u7F51\u9875\u5DF2\u542F\u52A8\uFF1A${handle.url}\u3002\u8BF7\u5728 Codex \u5185\u5D4C\u6D4F\u89C8\u5668\u53F3\u4FA7\u6253\u5F00\u6B64\u5730\u5740\u3002` }]
+        structuredContent: { status: "running", url, referenceSessionId: id, host: handle.host, port: handle.port, inbox: inbox.getSummary() },
+        content: [{ type: "text", text: `Pinterest Inbox \u670D\u52A1\u5DF2\u5C31\u7EEA\uFF1A${url}\u3002\u4E0B\u4E00\u6B65\u5FC5\u987B\u8C03\u7528 Codex open_in_codex\uFF1Atarget={type:"browser",url:"${url}"}\uFF0Cplacement="right"\u3002\u670D\u52A1\u5C31\u7EEA\u4E0D\u7B49\u4E8E\u9762\u677F\u5DF2\u663E\u793A\uFF0C\u8BF7\u6839\u636E\u6D4F\u89C8\u5668\u5DE5\u5177\u7ED3\u679C\u62A5\u544A\u5DF2\u6253\u5F00\u6216\u5DF2\u6392\u961F\u3002\u4FDD\u7559\u672C\u4EFB\u52A1\u7684\u53C2\u8003\u4F1A\u8BDD ${id}\u3002\u7528\u6237\u9009\u56FE\u540E\uFF0C\u901A\u8FC7 get_pinterest_reference_selection \u8BFB\u53D6\u8BE5\u4F1A\u8BDD\uFF0C\u518D\u8BFB\u53D6\u539F\u56FE\u3002` }]
       };
     } catch (error2) {
       reportInternalError("local panel start failed", error2);
       return {
         isError: true,
-        content: [{ type: "text", text: "\u65E0\u6CD5\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
+        content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u65E0\u6CD5\u542F\u52A8 Pinterest Inbox \u672C\u5730\u7F51\u9875\uFF1B\u8BF7\u68C0\u67E5\u63D2\u4EF6\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" }]
       };
+    }
+  }
+);
+server.registerTool(
+  "get_pinterest_reference_selection",
+  {
+    title: "\u8BFB\u53D6\u5F53\u524D\u4EFB\u52A1\u7684 Pinterest \u53C2\u8003\u56FE",
+    description: "\u5F53\u7528\u6237\u8981\u6C42\u4F7F\u7528\u5DF2\u9009\u53C2\u8003\u56FE\u65F6\uFF0C\u4F20\u5165\u672C\u4EFB\u52A1 open_pinterest_inbox_web \u8FD4\u56DE\u7684 referenceSessionId\u3002\u6309\u7528\u6237\u6392\u5E8F\u8FD4\u56DE\u7ECF\u9A8C\u8BC1\u7684\u539F\u56FE\u8DEF\u5F84\u4E0E\u7F16\u53F7\uFF1B\u5FC5\u987B\u7EE7\u7EED\u8BFB\u53D6\u56FE\u7247\u540E\u624D\u80FD\u8FDB\u884C\u89C6\u89C9\u5206\u6790\u6216\u751F\u56FE\u3002\u4E0D\u8981\u521B\u5EFA\u65B0\u53C2\u8003\u7BEE\u6216\u731C\u6D4B\u5176\u4ED6\u4EFB\u52A1\u7684\u4F1A\u8BDD ID\u3002",
+    inputSchema: {
+      referenceSessionId: external_exports.string().regex(REFERENCE_SESSION_PATTERN),
+      expectedRevision: external_exports.number().int().min(0).optional()
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ referenceSessionId, expectedRevision }) => {
+    try {
+      const selected = await references.resolve(referenceSessionId, expectedRevision);
+      return {
+        structuredContent: selected,
+        content: [{ type: "text", text: `\u5DF2\u786E\u8BA4 ${selected.files.length} \u5F20\u53C2\u8003\u56FE\uFF08\u7248\u672C ${selected.revision}\uFF09\u3002\u8BF7\u6309\u987A\u5E8F\u8BFB\u53D6\u539F\u56FE\uFF1A
+${selected.files.map((file) => `${file.number}. ${file.title}
+${file.path}`).join("\n")}` }]
+      };
+    } catch (error2) {
+      return { isError: true, content: [{ type: "text", text: error2 instanceof ReferenceError2 ? error2.message : "\u53C2\u8003\u56FE\u6682\u65F6\u4E0D\u53EF\u8BFB\uFF0C\u8BF7\u5237\u65B0\u53C2\u8003\u7BEE\u540E\u91CD\u8BD5" }] };
     }
   }
 );
@@ -22345,9 +22853,12 @@ if (process.argv[1] && fileURLToPath2(import.meta.url) === process.argv[1]) {
 }
 export {
   InboxService,
+  ReferenceError2 as ReferenceError,
+  ReferenceSessions,
   WorkspaceRegistry,
   inbox,
   parseInboxFilename,
+  references,
   server,
   startLocalPanelServer,
   startServer,

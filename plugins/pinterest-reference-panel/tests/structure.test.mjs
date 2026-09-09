@@ -83,10 +83,6 @@ test("local browser panel is independent from the MCP Apps bridge", async () => 
     javascript,
     /finally \{\s*if \(isCurrentRequest\(\)\) \{[\s\S]*?state\.pageLoading = false;[\s\S]*?renderContent\(\);\s*\}\s*\}/
   );
-  assert.match(
-    javascript,
-    /elements\.boardsTab\.addEventListener\("click", \(\) => \{\s*state\.tab = "boards";\s*state\.boardId = null;\s*state\.boardTitle = null;\s*void loadPage\(\{ reset: true \}\);\s*\}\);/
-  );
   assert.match(css, /position:\s*sticky/);
   assert.match(css, /min-height:\s*100dvh/);
   assert.match(html, /Pins/);

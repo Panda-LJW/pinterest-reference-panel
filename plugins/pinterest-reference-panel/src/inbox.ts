@@ -79,6 +79,8 @@ export type InboxListOptions = {
   limit?: number;
   boardId?: string;
   forceRescan?: boolean;
+  query?: string;
+  sort?: "recent" | "oldest" | "title";
 };
 
 function hash(value: string) {
@@ -448,9 +450,18 @@ export class InboxService {
   async getPublicPage(options: InboxListOptions = {}): Promise<InboxPage> {
     if (options.forceRescan) await this.scan();
     const records = [...this.assets.values()];
-    const filteredRecords = options.boardId
-      ? records.filter((record) => record.boardId === options.boardId)
-      : records;
+    const words = (options.query ?? "").normalize("NFKC").toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    const filteredRecords = records.filter(record => {
+      if (options.boardId && record.boardId !== options.boardId) return false;
+      const text = `${record.title} ${record.boardTitle} ${record.pinId}`.normalize("NFKC").toLocaleLowerCase();
+      return words.every(word => text.includes(word));
+    });
+    filteredRecords.sort((left, right) => {
+      const order = options.sort === "title" ? left.title.localeCompare(right.title, "zh-CN", { numeric: true })
+        : options.sort === "oldest" ? left.updatedAt.localeCompare(right.updatedAt)
+          : right.updatedAt.localeCompare(left.updatedAt);
+      return order || left.id.localeCompare(right.id);
+    });
     const offset = Math.max(0, Number.parseInt(options.cursor ?? "0", 10) || 0);
     const limit = Math.max(1, Math.min(options.limit ?? 30, 30));
     const visible = filteredRecords.slice(offset, offset + limit);

@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { constants, existsSync } from "node:fs";
+import { open, readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { InboxService } from "./inbox.js";
+import { ReferenceError, ReferenceSessions, REFERENCE_SESSION_PATTERN } from "./references.js";
 
 const LOOPBACK_HOST = "127.0.0.1";
 const MAX_JSON_BYTES = 2_048;
@@ -19,6 +20,7 @@ export type LocalPanelServerOptions = {
   port?: number;
   assetRoot?: string;
   clipboardWriter?: ClipboardWriter;
+  references?: ReferenceSessions;
 };
 
 export type LocalPanelServerHandle = {
@@ -69,8 +71,8 @@ function assertLoopbackRequest(request: IncomingMessage, expectedHost: string) {
   }
 }
 
-function assertApiSession(request: IncomingMessage, sessionId: string, csrfToken: string) {
-  if (requestCookie(request, "pinterest_panel_session") !== sessionId) {
+function assertApiSession(request: IncomingMessage, sessionId: string, csrfToken: string, cookieName: string) {
+  if (requestCookie(request, cookieName) !== sessionId) {
     throw new HttpError(401, "本地面板会话已失效，请刷新页面");
   }
   if (request.headers["x-pinterest-panel-token"] !== csrfToken) {
@@ -121,35 +123,64 @@ function parsePort(value: number | undefined) {
   return value;
 }
 
-export async function writeTextToMacClipboard(text: string) {
-  if (process.platform !== "darwin" || !existsSync("/usr/bin/pbcopy")) {
-    throw new Error("当前系统没有可用的 macOS 剪贴板服务");
-  }
-  if (!text || Buffer.byteLength(text, "utf8") > 16_384) throw new Error("待复制路径无效或过长");
-
-  await new Promise<void>((resolveWrite, rejectWrite) => {
-    const child = spawn("/usr/bin/pbcopy", [], { stdio: ["pipe", "ignore", "pipe"] });
-    const errors: Buffer[] = [];
+function runClipboardCommand(command: "pbcopy" | "pbpaste", input: string, deadline: number) {
+  return new Promise<Buffer>((resolveCommand, rejectCommand) => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { rejectCommand(new Error("clipboard timeout")); return; }
+    const child = spawn(`/usr/bin/${command}`, command === "pbpaste" ? ["-Prefer", "txt"] : [], {
+      stdio: ["pipe", "pipe", "ignore"],
+      // GUI/MCP hosts may use C or no locale. pbcopy can exit 0 yet discard
+      // non-ASCII input in that environment; stdin's UTF-8 flag alone is insufficient.
+      env: { ...process.env, LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", LC_CTYPE: "en_US.UTF-8" }
+    });
+    const chunks: Buffer[] = [];
+    let size = 0;
     let settled = false;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (error) rejectWrite(error); else resolveWrite();
+      if (error) rejectCommand(error); else resolveCommand(Buffer.concat(chunks));
     };
     const timer = setTimeout(() => {
-      child.kill("SIGTERM");
-      finish(new Error("写入剪贴板超时"));
-    }, 5_000);
-    child.stderr.on("data", (chunk) => errors.push(Buffer.from(chunk)));
+      child.kill("SIGKILL");
+      finish(new Error("clipboard timeout"));
+    }, remaining);
+    child.stdout.on("data", (chunk: Buffer) => {
+      if (settled) return;
+      size += chunk.byteLength;
+      if (size > 16_384) {
+        child.kill("SIGKILL");
+        finish(new Error("clipboard content changed"));
+      } else chunks.push(Buffer.from(chunk));
+    });
     child.once("error", (error) => finish(error));
     child.once("close", (code) => {
       if (code === 0) finish();
-      else finish(new Error(Buffer.concat(errors).toString("utf8").trim() || `pbcopy 退出码 ${code}`));
+      else finish(new Error("clipboard command failed"));
     });
     child.stdin.once("error", (error) => finish(error));
-    child.stdin.end(text, "utf8");
+    child.stdin.end(input, "utf8");
   });
+}
+
+export async function writeTextToMacClipboard(text: string) {
+  if (process.platform !== "darwin" || !existsSync("/usr/bin/pbcopy") || !existsSync("/usr/bin/pbpaste")) {
+    throw new HttpError(503, "当前系统没有可用的 macOS 剪贴板服务");
+  }
+  if (!text || text.includes("\0") || Buffer.byteLength(text, "utf8") > 16_384) {
+    throw new HttpError(400, "待复制路径无效或过长");
+  }
+  try {
+    const deadline = Date.now() + 5_000;
+    await runClipboardCommand("pbcopy", text, deadline);
+    const copied = await runClipboardCommand("pbpaste", "", deadline);
+    if (!copied.equals(Buffer.from(text, "utf8"))) throw new Error("clipboard verification failed");
+  } catch {
+    // Never return clipboard contents or paths in an HTTP error, and never
+    // retry automatically: another application may have just copied something.
+    throw new HttpError(503, "未能确认路径已写入剪贴板，请重新复制");
+  }
 }
 
 export async function startLocalPanelServer(options: LocalPanelServerOptions): Promise<LocalPanelServerHandle> {
@@ -161,10 +192,12 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
     readFile(join(assetRoot, "local-panel.js"), "utf8")
   ]);
   const clipboardWriter = options.clipboardWriter ?? writeTextToMacClipboard;
+  const references = options.references ?? new ReferenceSessions(options.inbox);
   const sessionId = randomBytes(24).toString("base64url");
   const csrfToken = randomBytes(24).toString("base64url");
   let origin = "";
   let expectedHost = "";
+  let cookieName = "";
 
   const httpServer = createServer((request, response) => {
     void (async () => {
@@ -173,12 +206,15 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
       const requestUrl = new URL(request.url ?? "/", origin);
 
       if (method === "GET" && requestUrl.pathname === "/") {
-        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken);
+        const referenceSessionId = requestUrl.searchParams.get("ref") ?? "";
+        if (referenceSessionId && !REFERENCE_SESSION_PATTERN.test(referenceSessionId)) throw new HttpError(400, "参考会话地址无效");
+        const html = htmlTemplate.replace("__PINTEREST_PANEL_TOKEN__", csrfToken)
+          .replace("__PINTEREST_REFERENCE_SESSION__", referenceSessionId);
         response.writeHead(200, {
           ...commonHeaders(),
           "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data:; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
           "Content-Type": "text/html; charset=utf-8",
-          "Set-Cookie": `pinterest_panel_session=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
+          "Set-Cookie": `${cookieName}=${sessionId}; HttpOnly; SameSite=Strict; Path=/`
         });
         response.end(html);
         return;
@@ -200,7 +236,19 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
       }
 
       if (!requestUrl.pathname.startsWith("/api/")) throw new HttpError(404, "页面不存在");
-      assertApiSession(request, sessionId, csrfToken);
+      assertApiSession(request, sessionId, csrfToken, cookieName);
+
+      const referenceSessionId = () => {
+        const id = request.headers["x-pinterest-reference-session"];
+        if (typeof id !== "string") throw new HttpError(400, "请从当前 Codex 任务打开参考篮");
+        references.require(id);
+        return id;
+      };
+
+      if (method === "GET" && requestUrl.pathname === "/api/references") {
+        sendJson(response, 200, await references.describe(referenceSessionId()));
+        return;
+      }
 
       if (method === "GET" && requestUrl.pathname === "/api/status") {
         const knownVersionRaw = requestUrl.searchParams.get("knownVersion");
@@ -213,13 +261,18 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
         const cursorRaw = requestUrl.searchParams.get("cursor");
         const limitRaw = requestUrl.searchParams.get("limit");
         const boardIdRaw = requestUrl.searchParams.get("boardId");
+        const query = requestUrl.searchParams.get("q") ?? "";
+        const sort = requestUrl.searchParams.get("sort") ?? "recent";
+        if (query.length > 200) throw new HttpError(400, "搜索内容过长，请缩短关键词");
+        if (sort !== "recent" && sort !== "oldest" && sort !== "title") throw new HttpError(400, "排序方式无效");
         if (cursorRaw && !/^\d{1,9}$/.test(cursorRaw)) throw new HttpError(400, "分页游标无效");
         if (limitRaw && !/^\d{1,2}$/.test(limitRaw)) throw new HttpError(400, "分页数量无效");
         if (boardIdRaw && (boardIdRaw.length > 255 || /[\u0000-\u001f]/.test(boardIdRaw))) throw new HttpError(400, "图版 ID 无效");
         const page = await options.inbox.getPublicPage({
           ...(cursorRaw ? { cursor: cursorRaw } : {}),
           ...(limitRaw ? { limit: Number.parseInt(limitRaw, 10) } : {}),
-          ...(boardIdRaw ? { boardId: boardIdRaw } : {})
+          ...(boardIdRaw ? { boardId: boardIdRaw } : {}),
+          query, sort
         });
         sendJson(response, 200, { page });
         return;
@@ -233,7 +286,48 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
         return;
       }
 
+      const previewMatch = method === "GET" ? requestUrl.pathname.match(/^\/api\/previews\/([a-f0-9]{24})$/) : null;
+      if (previewMatch) {
+        const asset = await options.inbox.resolveAsset(previewMatch[1] ?? "");
+        if (!asset) throw new HttpError(404, "原图已不在素材库中，请刷新后重试");
+        const file = await open(asset.sourcePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+        try {
+          const info = await file.stat();
+          if (!info.isFile()) throw new HttpError(404, "原图不可用");
+          if (info.size > 64 * 1024 * 1024) throw new HttpError(413, "原图超过 64 MB，请复制路径后交给 Codex 查看");
+          const current = await options.inbox.resolveAsset(asset.id);
+          if (!current || current.sourcePath !== asset.sourcePath) throw new HttpError(409, "原图位置已变化，请刷新后重试");
+          const types: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".avif": "image/avif", ".gif": "image/gif" };
+          const contentType = types[asset.extension];
+          if (!contentType) throw new HttpError(415, "暂不支持预览此格式");
+          const bytes = await file.readFile();
+          response.writeHead(200, { ...commonHeaders(), "Content-Type": contentType, "Content-Length": bytes.length });
+          response.end(bytes);
+        } finally { await file.close(); }
+        return;
+      }
+
       if (method === "POST") assertSameOriginMutation(request, origin);
+      if (method === "POST" && requestUrl.pathname === "/api/references") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "参考篮请求无效");
+        const value = body as { assetIds?: unknown; revision?: unknown };
+        if (Object.keys(body).sort().join() !== "assetIds,revision" || !Array.isArray(value.assetIds)
+          || !value.assetIds.every(id => typeof id === "string") || !Number.isInteger(value.revision) || Number(value.revision) < 0) {
+          throw new HttpError(400, "参考篮只能提交素材 ID 列表与版本号");
+        }
+        sendJson(response, 200, await references.replace(referenceSessionId(), value.assetIds, Number(value.revision)));
+        return;
+      }
+      if (method === "POST" && requestUrl.pathname === "/api/references/clipboard") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).join() !== "revision"
+          || !Number.isInteger((body as { revision?: unknown }).revision)) throw new HttpError(400, "复制请求需要参考篮版本号");
+        const selected = await references.resolve(referenceSessionId(), (body as { revision: number }).revision);
+        await clipboardWriter(selected.files.map(file => file.path).join("\n"));
+        sendJson(response, 200, { status: "copied", count: selected.files.length });
+        return;
+      }
       if (method === "POST" && requestUrl.pathname === "/api/refresh") {
         const body = await readJson(request);
         if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).length !== 0) {
@@ -267,8 +361,8 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
         response.destroy();
         return;
       }
-      const status = error instanceof HttpError ? error.status : 500;
-      const message = error instanceof HttpError
+      const status = error instanceof HttpError || error instanceof ReferenceError ? error.status : 500;
+      const message = error instanceof HttpError || error instanceof ReferenceError
         ? error.message
         : "本地面板暂时无法完成请求，请重试";
       sendJson(response, status, { error: message });
@@ -291,6 +385,7 @@ export async function startLocalPanelServer(options: LocalPanelServerOptions): P
   }
   origin = `http://${LOOPBACK_HOST}:${address.port}`;
   expectedHost = `${LOOPBACK_HOST}:${address.port}`;
+  cookieName = `pinterest_panel_session_${address.port}`;
   let closePromise: Promise<void> | null = null;
 
   return {

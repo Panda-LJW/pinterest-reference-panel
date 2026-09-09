@@ -2,7 +2,13 @@
 
 一个面向 **macOS + Chrome** 的本地参考素材工作流：Chrome 扩展把 Pinterest 静态图片下载到 `PinterestInbox`，Codex 插件在本机回环地址提供 Pins / Boards 瀑布流；点击素材即可复制长期库原文件的真实绝对路径，再粘贴到当前对话供 Codex 引用。
 
-当前状态：**0.4.0 MVP 已验收**。真实登录态下的 Chrome originals 下载、本机存量迁移和右侧本地瀑布流均已确认；用户已在新 Codex 任务中完成“点击图片 → `⌘V` 粘贴绝对路径 → 连同正常需求发送”，Codex 成功读取该 Inbox 原图并将其用于图片生成。
+当前状态：**首个公开版本 0.4.0 已完成发布验收**。仓库与 Codex 插件版本为 `0.4.0`，随附的 Chrome 下载器独立版本为 `0.4.2`。
+
+2026-09-09 已在真实登录态 Pinterest、Chrome 0.4.2 扩展和 Codex 可见内嵌浏览器中完成端到端检查：连续点击 3 张不同图片并立即重复点击其中一张，最终只保存 3 张；多选 6 张后立即取消，最终保存 0 张、跳过 6 张；在 Codex 素材栏选择 3 张后，同一 `referenceSessionId` 经 MCP 返回相同顺序的原文件，Codex 已实际读取三张原图。批量复制的三条路径与系统剪贴板逐字节一致，包含中文文件名。自动测试共 95/95 通过，生产依赖与完整依赖审计均为 0 个已知漏洞。
+
+使用方法：在加载插件的新任务中说“打开 Pinterest Inbox”，点击图片预览，用 ＋ 选择 2–3 张；回到该任务说“使用选中的参考图，按顺序分析”。Codex 会读取该任务的有序原图列表，再实际查看原图。重新打开同一参考篮应复用原会话，另一个任务会创建空篮；插件进程重启后需要重新选图。主流程的设计与边界见 [SPEC](SPEC.md) 和 [UX 方案](docs/UX-PLAN.md)，验证与变更证据见 [LOG](LOG.md)。
+
+素材工作台支持完整素材库搜索、图版筛选、三种排序、原图预览、系统深色、键盘翻图、最多 10 张的有序参考篮，以及单张/批量路径复制。宿主是否固定显示在右侧由 Codex 布局能力决定；若自动打开请求只进入排队状态，可在 Codex 的可见内嵌浏览器中打开工具返回的本地 URL。
 
 ## 已实现能力
 
@@ -28,6 +34,8 @@
 
 ## 安装 Chrome 扩展
 
+**下载器 0.4.2 已通过真实 Pinterest 验收：**单张模式支持在下载时连续点击其他图片，追加到现有后台队列并按序处理；同一未完成图片去重，进度汇总整组，取消覆盖全部未完成项。保留 0.4.1 面板重绘恢复及原有三档质量、文件名和入库流程。下载器自动测试 33/33 及真实 Chrome Downloads 链路均已验证；详见[下载器说明](extensions/pinterest-inbox-downloader/README.md)。
+
 1. 在 Chrome 打开 `chrome://extensions`；
 2. 开启“开发者模式”；
 3. 点击“加载已解压的扩展程序”；
@@ -46,7 +54,7 @@ codex plugin marketplace add "$PWD"
 codex plugin add pinterest-reference-panel@personal
 ```
 
-插件更新后需要开启一个新的 Codex 任务，新的 MCP 工具才会加载。主路线是调用 `open_pinterest_inbox_web`，再把它返回的 `http://127.0.0.1:<动态端口>/` 打开到 Codex 内嵌浏览器右侧；点击图片后回到对话按 `⌘V`。旧 `render_pinterest_reference_panel` 继续保留为工作区导入回滚方案。
+插件更新后需要开启一个新的 Codex 任务，新的 MCP 工具才会加载。主路线是调用 `open_pinterest_inbox_web`，保存返回的 `referenceSessionId`，把带 `?ref=<id>` 的 URL 打开到 Codex 可见内嵌浏览器。用户选图并提出需求后，调用 `get_pinterest_reference_selection` 读取同一参考篮。复制路径后按 `⌘V` 的备用方式继续可用。旧 `render_pinterest_reference_panel` 继续保留为工作区导入回滚方案。
 
 ## 本地目录
 
@@ -67,7 +75,7 @@ npm run check
 npm test
 ```
 
-测试覆盖 Inbox 扫描与监听、缩略图路径复核、本地 HTTP 回环/会话/Origin 边界、剪贴板解析、Boards 完整分页、MCP 并发停止/重开与 EOF/SIGTERM 生命周期、旧工作区边界、UI 过期请求防护、扩展路径清理和下载队列。真实 Downloads 写入、Pictures 长期库存取、右侧点击复制和新任务手动粘贴读取链路均已按 [SPEC.md](SPEC.md) 完成人工端到端验收。
+测试覆盖 Inbox 扫描与监听、缩略图路径复核、本地 HTTP 回环/会话/Origin 边界、剪贴板解析、Boards 完整分页、MCP 并发停止/重开与 EOF/SIGTERM 生命周期、旧工作区边界、UI 过期请求防护、扩展路径清理和下载队列。真实 Downloads 写入、Pictures 长期库存取、中文路径复制、参考篮会话到 MCP 原文件读取均已完成人工端到端验收，详见 [SPEC.md](SPEC.md)。
 
 ## 仓库结构
 

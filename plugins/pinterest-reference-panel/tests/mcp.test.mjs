@@ -74,6 +74,7 @@ test("stdio MCP lists Inbox content and safely imports one indexed image", async
   const tools = await client.listTools();
   assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), [
     "get_pinterest_inbox_web_status",
+    "get_pinterest_reference_selection",
     "import_pinterest_reference",
     "list_pinterest_inbox",
     "open_pinterest_inbox_web",
@@ -99,11 +100,35 @@ test("stdio MCP lists Inbox content and safely imports one indexed image", async
 
   const opened = await client.callTool({ name: "open_pinterest_inbox_web", arguments: {} });
   assert.equal(opened.structuredContent.status, "running");
-  assert.match(opened.structuredContent.url, /^http:\/\/127\.0\.0\.1:\d+\/$/);
+  assert.match(opened.structuredContent.url, /^http:\/\/127\.0\.0\.1:\d+\/\?ref=[a-f0-9]{32}$/);
 
   const webStatus = await client.callTool({ name: "get_pinterest_inbox_web_status", arguments: {} });
   assert.equal(webStatus.structuredContent.status, "running");
-  assert.equal(webStatus.structuredContent.url, opened.structuredContent.url);
+  assert.equal(webStatus.structuredContent.url, new URL("/", opened.structuredContent.url).href);
+
+  const referenceSessionId = opened.structuredContent.referenceSessionId;
+  const browser = await openWebSession(opened.structuredContent.url);
+  const other = await client.callTool({ name: "open_pinterest_inbox_web", arguments: {} });
+  assert.notEqual(other.structuredContent.referenceSessionId, referenceSessionId);
+  const assetId = rendered.structuredContent.assets[0].id;
+  const selected = await fetch(new URL("/api/references", opened.structuredContent.url), {
+    method: "POST",
+    headers: { Cookie: browser.cookie, "X-Pinterest-Panel-Token": browser.token,
+      "X-Pinterest-Reference-Session": referenceSessionId,
+      Origin: new URL(opened.structuredContent.url).origin, "Content-Type": "application/json" },
+    body: JSON.stringify({ assetIds: [assetId], revision: 0 })
+  });
+  assert.equal(selected.status, 200);
+  const read = await client.callTool({ name: "get_pinterest_reference_selection", arguments: { referenceSessionId, expectedRevision: 1 } });
+  assert.equal(read.isError, undefined);
+  assert.equal(read.structuredContent.files[0].assetId, assetId);
+  assert.match(read.structuredContent.files[0].path, /editorial\/456__signal-poster\.jpg$/);
+  const empty = await client.callTool({ name: "get_pinterest_reference_selection", arguments: { referenceSessionId: other.structuredContent.referenceSessionId } });
+  assert.equal(empty.isError, true);
+  const stale = await client.callTool({ name: "get_pinterest_reference_selection", arguments: { referenceSessionId, expectedRevision: 0 } });
+  assert.equal(stale.isError, true);
+  const reopened = await client.callTool({ name: "open_pinterest_inbox_web", arguments: { referenceSessionId } });
+  assert.equal(reopened.structuredContent.url, opened.structuredContent.url);
 
   const stopped = await client.callTool({ name: "stop_pinterest_inbox_web", arguments: {} });
   assert.equal(stopped.structuredContent.status, "stopped");
@@ -111,6 +136,8 @@ test("stdio MCP lists Inbox content and safely imports one indexed image", async
   const stoppedStatus = await client.callTool({ name: "get_pinterest_inbox_web_status", arguments: {} });
   assert.equal(stoppedStatus.structuredContent.status, "stopped");
   assert.equal(stoppedStatus.structuredContent.url, undefined);
+  const afterClose = await client.callTool({ name: "get_pinterest_reference_selection", arguments: { referenceSessionId } });
+  assert.equal(afterClose.structuredContent.revision, 1, "HTTP close keeps reference sessions in the MCP process");
 
   const imported = await client.callTool({
     name: "import_pinterest_reference",
@@ -198,7 +225,7 @@ test("open waits for an in-flight stop and never overlaps local panel instances"
     assert.equal(stopped.structuredContent.status, "stopped");
     assert.equal(reopened.structuredContent.status, "running");
     assert.deepEqual(completionOrder, ["stop", "open"], "the old service must finish stopping before reopen resolves");
-    if (reopened.structuredContent.url !== first.structuredContent.url) {
+    if (new URL(reopened.structuredContent.url).origin !== new URL(first.structuredContent.url).origin) {
       await assert.rejects(fetch(first.structuredContent.url));
     }
     assert.equal((await fetch(reopened.structuredContent.url)).status, 200);

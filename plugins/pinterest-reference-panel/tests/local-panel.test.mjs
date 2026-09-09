@@ -11,7 +11,7 @@ async function openSession(url) {
   assert.equal(response.status, 200);
   const html = await response.text();
   const cookie = response.headers.get("set-cookie");
-  assert.match(cookie, /pinterest_panel_session=[^;]+; HttpOnly; SameSite=Strict; Path=\//);
+  assert.match(cookie, /pinterest_panel_session_\d+=[^;]+; HttpOnly; SameSite=Strict; Path=\//);
   const token = html.match(/name="pinterest-panel-token" content="([^"]+)"/)?.[1];
   assert.match(token, /^[A-Za-z0-9_-]+$/);
   return {

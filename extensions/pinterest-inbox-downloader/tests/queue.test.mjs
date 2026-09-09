@@ -17,12 +17,15 @@ function waitUntil(predicate, timeoutMs = 2000) {
   });
 }
 
-async function createHarness(fetchImpl, convertImpl = null) {
+async function createHarness(fetchImpl, convertImpl = null, simulation = {}) {
   const sharedSource = await readFile(new URL("shared.js", extensionRoot), "utf8");
   const backgroundSource = await readFile(new URL("background.js", extensionRoot), "utf8");
   const downloadCalls = [];
   const filenameSuggestions = [];
   const progress = [];
+  const cancelled = [];
+  const states = new Map();
+  const pendingCallbacks = [];
   let onChanged;
   let onDeterminingFilename;
   let onMessage;
@@ -63,10 +66,16 @@ async function createHarness(fetchImpl, convertImpl = null) {
           const id = nextId++;
           downloadCalls.push(options);
           onDeterminingFilename({ id, url: options.url, filename: new URL(options.url).pathname.split("/").pop(), byExtensionId: runtime.id }, (suggestion = {}) => filenameSuggestions.push(suggestion));
-          callback(id);
+          states.set(id, simulation.completeBeforeCallback ? "complete" : "in_progress");
+          if (simulation.completeBeforeCallback) onChanged({ id, state: { current: "complete" } });
+          if (simulation.holdDownloadCallback) pendingCallbacks.push(() => callback(id));
+          else callback(id);
         },
-        search(_query, callback) { callback([]); },
-        cancel(_id, callback) { callback?.(); }
+        search(query, callback) { callback([{ id: query.id, state: states.get(query.id) }]); },
+        cancel(id, callback) {
+          cancelled.push(id); states.set(id, "interrupted");
+          onChanged({ id, state: { current: "interrupted" } }); callback?.();
+        }
       }
     }
   };
@@ -77,12 +86,15 @@ async function createHarness(fetchImpl, convertImpl = null) {
     downloadCalls,
     filenameSuggestions,
     progress,
+    cancelled,
+    releaseDownload() { pendingCallbacks.shift()?.(); },
     enqueue(message) {
       let response;
       onMessage(message, { tab: { id: 7 } }, (value) => { response = value; });
       return response;
     },
     complete(downloadId, state = "complete") {
+      states.set(downloadId, state);
       onChanged({ id: downloadId, state: { current: state } });
     }
   };
@@ -135,6 +147,47 @@ test("download queue resolves originals, stays sequential, and retries once", as
   assert.equal(final.failed, 0);
   assert.equal(final.skipped, 0);
   assert.equal(final.originalUnavailable, 0);
+});
+
+test("a download completed before Chrome returns its ID is recognized without retry or delay", async () => {
+  const harness = await createHarness(successfulOriginal, null, { completeBeforeCallback: true });
+  harness.enqueue({type:"pinterestInboxEnqueue",jobId:"fast",quality:"original",assets:[
+    {pinId:"81",boardSlug:"board",title:"fast",imageUrl:"https://i.pinimg.com/736x/fast.jpg"}
+  ]});
+  await waitUntil(() => harness.progress.some(item => item.status?.done));
+  assert.equal(harness.downloadCalls.length, 1);
+  assert.equal(harness.progress.at(-1).status.success, 1);
+});
+
+test("cancelling while Chrome assigns a download ID cancels that download once its ID arrives", async () => {
+  const harness = await createHarness(successfulOriginal, null, { holdDownloadCallback: true });
+  harness.enqueue({type:"pinterestInboxEnqueue",jobId:"cancel-early",quality:"original",assets:[
+    {pinId:"82",boardSlug:"board",title:"cancel",imageUrl:"https://i.pinimg.com/736x/cancel.jpg"},
+    {pinId:"83",boardSlug:"board",title:"queued",imageUrl:"https://i.pinimg.com/736x/queued.jpg"}
+  ]});
+  await waitUntil(() => harness.downloadCalls.length === 1);
+  const result=harness.enqueue({type:"pinterestInboxCancel",jobId:"cancel-early"});
+  assert.equal(result.status.done, false);
+  harness.releaseDownload();
+  await waitUntil(() => harness.progress.some(item => item.status?.done));
+  assert.deepEqual(harness.cancelled, [1]);
+  assert.equal(harness.downloadCalls.length, 1);
+  assert.equal(harness.progress.at(-1).status.pending, 0);
+  assert.equal(harness.progress.at(-1).status.cancelled, true);
+});
+
+test("cancelling during originals probing skips conversion and download", async () => {
+  const probes=[];
+  let conversions=0;
+  const harness=await createHarness(url=>new Promise(resolve=>probes.push(()=>resolve({ok:true,url,headers:{get:()=>"image/jpeg"}}))),()=>{conversions++;});
+  harness.enqueue({type:"pinterestInboxEnqueue",jobId:"cancel-probe",quality:"high",assets:[
+    {pinId:"84",boardSlug:"board",title:"probe",imageUrl:"https://i.pinimg.com/736x/probe.jpg"}
+  ]});
+  harness.enqueue({type:"pinterestInboxCancel",jobId:"cancel-probe"});
+  probes.forEach(finish=>finish());
+  await waitUntil(()=>harness.progress.some(item=>item.status?.done));
+  assert.equal(conversions,0);
+  assert.equal(harness.downloadCalls.length,0);
 });
 
 test("keeps WebP only when it is the sole available originals asset", async () => {
@@ -254,4 +307,25 @@ test("smart-light preserves a WebP originals asset without invoking the converte
   harness.complete(1);
   await waitUntil(() => harness.progress.some((item) => item.status?.done));
   assert.equal(harness.progress.findLast((item) => item.status?.done).status.success, 1);
+});
+
+test("new single-image jobs join the existing queue in click order while the first downloads", async()=>{
+ const h=await createHarness(successfulOriginal);
+ const add=id=>h.enqueue({type:'pinterestInboxEnqueue',jobId:`click-${id}`,quality:'original',assets:[{pinId:String(id),boardSlug:'board',title:`image-${id}`,imageUrl:`https://i.pinimg.com/736x/image-${id}.jpg`}]});
+ add(1);await waitUntil(()=>h.downloadCalls.length===1);add(2);add(3);
+ assert.equal(h.downloadCalls.length,1,'later clicks must wait for the active download');
+ h.complete(1);await waitUntil(()=>h.downloadCalls.length===2);h.complete(2);
+ await waitUntil(()=>h.downloadCalls.length===3);h.complete(3);
+ await waitUntil(()=>h.progress.filter(p=>p.status.done).length===3);
+ assert.deepEqual(h.downloadCalls.map(d=>d.filename),[1,2,3].map(id=>`PinterestInbox/board/image-${id}__pin-${id}.jpg`));
+});
+
+test("cancelling the group of single-image jobs removes all waiting downloads",async()=>{
+ const h=await createHarness(successfulOriginal);
+ for(const id of [1,2,3])h.enqueue({type:'pinterestInboxEnqueue',jobId:`group-${id}`,quality:'original',assets:[{pinId:String(id),boardSlug:'board',title:String(id),imageUrl:`https://i.pinimg.com/736x/${id}.jpg`}]});
+ await waitUntil(()=>h.downloadCalls.length===1);
+ for(const id of [1,2,3])h.enqueue({type:'pinterestInboxCancel',jobId:`group-${id}`});
+ await waitUntil(()=>h.progress.filter(p=>p.status.done).length===3);
+ assert.equal(h.downloadCalls.length,1);assert.deepEqual(h.cancelled,[1]);
+ assert.ok(h.progress.filter(p=>p.status.done).every(p=>p.status.cancelled));
 });

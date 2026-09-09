@@ -113,20 +113,34 @@ function startDownload(options) {
 
 function findDownload(downloadId) {
   return new Promise((resolve) => {
-    chrome.downloads.search({ id: downloadId }, (items) => resolve(items?.[0] ?? null));
+    chrome.downloads.search({ id: downloadId }, (items) => {
+      const error = chrome.runtime.lastError;
+      resolve(error ? null : items?.[0] ?? null);
+    });
   });
 }
 
 function waitForDownload(downloadId) {
   return new Promise((resolve) => {
-    const timeout = setTimeout(async () => {
+    let settled = false;
+    const finish = (state) => {
+      if (settled) return;
+      settled = true;
       waiters.delete(downloadId);
-      const item = await findDownload(downloadId);
-      resolve(item?.state === "complete" ? "complete" : "interrupted");
-    }, 5 * 60 * 1000);
-    waiters.set(downloadId, (state) => {
       clearTimeout(timeout);
       resolve(state);
+    };
+    const timeout = setTimeout(async () => {
+      const item = await findDownload(downloadId);
+      if (settled) return;
+      if (item?.state !== "complete") chrome.downloads.cancel(downloadId, () => void chrome.runtime.lastError);
+      finish(item?.state === "complete" ? "complete" : "interrupted");
+    }, 5 * 60 * 1000);
+    waiters.set(downloadId, finish);
+    // A small download may finish before downloads.download returns its ID.
+    // Register the listener first, then reconcile the current terminal state.
+    void findDownload(downloadId).then((item) => {
+      if (item?.state === "complete" || item?.state === "interrupted") finish(item.state);
     });
   });
 }
@@ -157,6 +171,7 @@ chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
 
 async function runItem(item, job) {
   const original = await resolveOriginalAsset(item.asset);
+  if (job.cancelled) return "cancelled";
   if (!original) return "unsupported";
   let prepared;
   try {
@@ -182,7 +197,10 @@ async function runItem(item, job) {
           saveAs: false
         });
         activeItem = { ...item, downloadId };
-        const state = await waitForDownload(downloadId);
+        const completion = waitForDownload(downloadId);
+        // Cancellation can arrive while Chrome is still assigning the ID.
+        if (job.cancelled) chrome.downloads.cancel(downloadId, () => void chrome.runtime.lastError);
+        const state = await completion;
         activeItem = null;
         if (state === "complete") return "complete";
       } catch {
