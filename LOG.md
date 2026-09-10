@@ -1,5 +1,14 @@
 # 变更日志
 
+## 2026-09-10 — README 真实 Pinterest 场景替换
+
+- 任务目标：根据公开展示反馈，移除上一版偏合成感的抽象演示素材，改用真实 Pinterest 公开搜索页面与真实公开 Pin 画面，让访问者能直接判断下载器和 BoardFlow 瀑布流的实际使用场景。
+- 修改文件：更新 `README.md`；替换 `docs/images/boardflow-hero.png`、`boardflow-downloader.png`、`boardflow-dashboard.png`、`boardflow-boards.png` 和 `boardflow-preview.png`。`boardflow-downloader-panel.png` 继续使用当前 0.4.3 扩展的实际控制面板截图。
+- 关键决策：Pinterest 场景取自公开关键词搜索结果，浏览器中加载并核对当前 0.4.3 `Pinterest BoardFlow Downloader`，只临时勾选两张公开 Pin，没有触发下载、保存、关注或其他 Pinterest 写操作。提交图遮挡账号入口，不显示用户名、邮箱、私人 Board、个人收藏或本机路径；BoardFlow 本地界面在隔离演示环境中使用同组公开 Pin 画面，不读取用户素材库。README 同时注明第三方缩略图仅用于界面说明、版权归各自权利人所有。
+- 验证结果：使用 Playwright 在真实浏览器视口生成并逐张检查成品 PNG；README 图片引用、PNG 类型/尺寸、可识别文本元数据与 Git 差异检查通过。根 `npm test` 完整通过：Codex 插件 62/62、Chrome 下载器 33/33，共 95/95。
+- 未解决事项：合并后仍需复核 GitHub README 的最终渲染与图片加载；截图固定保留当时的公开搜索结果，不代表 Pinterest 对相关内容的推荐或背书。
+- 回滚提示：回退本条对应提交即可恢复上一组 README 展示图；不影响插件、Chrome 扩展、Pinterest 账号或本地素材库。
+
 ## 2026-09-10 — GitHub README 界面展示图
 
 - 任务目标：为首个公开版的 README 增加更有吸引力的主视觉与功能模块截图，让访问者能快速看懂“Pinterest 下载 → 本地整理 → Board 瀑布流 → Codex 有序参考”的完整流程。
