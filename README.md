@@ -12,13 +12,13 @@
 
 ## 界面预览
 
-以下截图均来自当前版本的实际界面，使用本地生成的演示素材，**不包含 Pinterest 账号、私人 Board、真实收藏或本机路径**。
+以下截图来自当前版本的实际界面：Pinterest 页面使用真实公开搜索结果，BoardFlow 工作台使用同组公开 Pin 画面在隔离演示环境中呈现。账号入口已遮挡，**不包含用户名、邮箱、私人 Board、个人收藏或本机路径**。截图中的 Pin 缩略图仅用于说明产品界面，版权归各自权利人所有。
 
 ### 在 Pinterest 页面上直接收集
 
 <table>
   <tr>
-    <td width="72%"><img src="docs/images/boardflow-downloader.png" alt="Pinterest BoardFlow 下载器在演示图版上多选图片"></td>
+    <td width="72%"><img src="docs/images/boardflow-downloader.png" alt="Pinterest BoardFlow 下载器在真实 Pinterest 公开搜索页上多选图片"></td>
     <td width="28%"><img src="docs/images/boardflow-downloader-panel.png" alt="Pinterest BoardFlow 下载器控制面板"></td>
   </tr>
   <tr>

@@ -2,6 +2,7 @@
 
 | 日期 | 摘要 | 日志位置 | HASH |
 | --- | --- | --- | --- |
+| 2026-09-10 | README 替换为真实 Pinterest 公开场景与 Pin 画面 | `LOG.md#2026-09-10--readme-真实-pinterest-场景替换` | `170f72b299d7` |
 | 2026-09-10 | GitHub README 主视觉与功能模块截图 | `LOG.md#2026-09-10--github-readme-界面展示图` | `c1604d8e87e7` |
 | 2026-09-09 | Pinterest BoardFlow 公开品牌、仓库名与显示名称更新 | `LOG.md#2026-09-09--pinterest-boardflow-公开品牌更新` | `e10f848da725` |
 | 2026-09-09 | 首个公开版本阻断项清理、依赖安全与真实 Chrome/Codex 验收 | `LOG.md#2026-09-09--首个公开版本阻断项清理与真实验收` | `1bf455fdecda` |
